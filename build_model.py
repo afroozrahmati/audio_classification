@@ -93,7 +93,7 @@ x_test = np.nan_to_num(x_test)
 x_test = np.asarray(x_test)
 
 for gamma in  [0,0.5,1,2,3,4,5,6,7,8,9,10,11]:
-    os.chdir('D:\\UW\\Final thesis\\Capstone')
+    os.chdir('D:\\UW\\Final thesis\\audio_classification')
     now = datetime.now() # current date and time
     now =now.strftime("%m")+'_'+now.strftime("%d")+'_'+now.strftime("%Y")+'_'+now.strftime("%H")+'_'+now.strftime("%M")+'_'+now.strftime("%S")
 
@@ -208,7 +208,7 @@ for gamma in  [0,0.5,1,2,3,4,5,6,7,8,9,10,11]:
     with open('result.txt', 'a') as f:
         f.write(result)
 
-    os.chdir('D:\\UW\\Final thesis\\Capstone')
+    os.chdir('D:\\UW\\Final thesis\\audio_classification')
     saved_format = {
         'history': train_history.history,
         'gamma': gamma,
@@ -234,5 +234,5 @@ for gamma in  [0,0.5,1,2,3,4,5,6,7,8,9,10,11]:
     save_name = './model/' + model_name
     model.save(save_name)
 
-    os.chdir('D:\\UW\\Final thesis\\Capstone')
+    os.chdir('D:\\UW\\Final thesis\\audio_classification')
     produce_plot(model_name, train_history.history, gamma, testAcc)
