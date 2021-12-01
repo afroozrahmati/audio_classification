@@ -92,7 +92,7 @@ x_train = np.asarray(x_train)
 x_test = np.nan_to_num(x_test)
 x_test = np.asarray(x_test)
 
-for gamma in  [0,0.5,1,2,3,4,5,6,7,8,9,10,11]:
+for gamma in  [5,6,7,8,9,10,11]:
     os.chdir('D:\\UW\\Final thesis\\audio_classification')
     now = datetime.now() # current date and time
     now =now.strftime("%m")+'_'+now.strftime("%d")+'_'+now.strftime("%Y")+'_'+now.strftime("%H")+'_'+now.strftime("%M")+'_'+now.strftime("%S")
