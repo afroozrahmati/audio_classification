@@ -94,3 +94,9 @@ Gamma=7, Epochs=200, Lr=0.0001, NMI=0.47025, ARI=0.64842, Train accuracy=0.91551
 Gamma=8, Epochs=200, Lr=0.0001, NMI=0.58026, ARI=0.74282, Train accuracy=0.93981, Test accuracy=0.89043
 Gamma=9, Epochs=200, Lr=0.0001, NMI=0.7012, ARI=0.83494, Train accuracy=0.96219, Test accuracy=0.87963
 Gamma=10, Epochs=200, Lr=0.0001, NMI=0.60531, ARI=0.76276, Train accuracy=0.94444, Test accuracy=0.87809
+Gamma=11, Epochs=200, Lr=0.0001, NMI=0.71267, ARI=0.83779, Train accuracy=0.96219, Test accuracy=0.87809
+
+--------------------------------
+MFCC=40 and transpose -- for report
+
+
