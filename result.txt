@@ -88,3 +88,9 @@ Gamma=1, Epochs=200, Lr=0.0001, NMI=0.57535, ARI=0.73767, Train accuracy=0.93904
 Gamma=2, Epochs=200, Lr=0.0001, NMI=0.50133, ARI=0.66541, Train accuracy=0.91744, Test accuracy=0.87037
 Gamma=3, Epochs=200, Lr=0.0001, NMI=0.67855, ARI=0.81518, Train accuracy=0.95679, Test accuracy=0.87346
 Gamma=4, Epochs=200, Lr=0.0001, NMI=0.48773, ARI=0.66169, Train accuracy=0.92052, Test accuracy=0.89352
+Gamma=5, Epochs=200, Lr=0.0001, NMI=0.55077, ARI=0.71826, Train accuracy=0.93326, Test accuracy=0.87654
+Gamma=6, Epochs=200, Lr=0.0001, NMI=0.57715, ARI=0.73198, Train accuracy=0.93866, Test accuracy=0.90123
+Gamma=7, Epochs=200, Lr=0.0001, NMI=0.47025, ARI=0.64842, Train accuracy=0.91551, Test accuracy=0.88272
+Gamma=8, Epochs=200, Lr=0.0001, NMI=0.58026, ARI=0.74282, Train accuracy=0.93981, Test accuracy=0.89043
+Gamma=9, Epochs=200, Lr=0.0001, NMI=0.7012, ARI=0.83494, Train accuracy=0.96219, Test accuracy=0.87963
+Gamma=10, Epochs=200, Lr=0.0001, NMI=0.60531, ARI=0.76276, Train accuracy=0.94444, Test accuracy=0.87809
