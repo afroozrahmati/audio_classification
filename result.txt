@@ -100,3 +100,12 @@ Gamma=11, Epochs=200, Lr=0.0001, NMI=0.71267, ARI=0.83779, Train accuracy=0.9621
 MFCC=40 and transpose -- for report
 
 
+Gamma=0, Epochs=400, Lr=0.0001, NMI=0.00118, ARI=0.01885, Train accuracy=0.73997, Test accuracy=0.74383
+Gamma=0.5, Epochs=400, Lr=0.0001, NMI=0.00035, ARI=-0.00057, Train accuracy=0.20949, Test accuracy=0.18981
+Gamma=1, Epochs=400, Lr=0.0001, NMI=0.76453, ARI=0.87814, Train accuracy=0.97222, Test accuracy=0.88889
+Gamma=2, Epochs=400, Lr=0.0001, NMI=0.57124, ARI=0.71554, Train accuracy=0.93017, Test accuracy=0.85494
+Gamma=4, Epochs=400, Lr=0.0001, NMI=0.66758, ARI=0.80995, Train accuracy=0.9564, Test accuracy=0.87654
+Gamma=6, Epochs=400, Lr=0.0001, NMI=0.75855, ARI=0.87434, Train accuracy=0.97145, Test accuracy=0.89969
+Gamma=7, Epochs=400, Lr=0.0001, NMI=0.75459, ARI=0.87158, Train accuracy=0.97068, Test accuracy=0.87191
+Gamma=9, Epochs=400, Lr=0.0001, NMI=0.70653, ARI=0.8344, Train accuracy=0.96142, Test accuracy=0.85957
+Gamma=10, Epochs=400, Lr=0.0001, NMI=0.34287, ARI=0.51681, Train accuracy=0.87539, Test accuracy=0.83951

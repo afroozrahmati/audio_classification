@@ -11,8 +11,7 @@ sr = 22050  # Sampling rate
 duration = 5
 samples = sr * duration
 
-
-# 865
+    # 865
 def extract_features(audio_path):
     #     y, sr = librosa.load(audio_path, duration=3)
     y, sr = librosa.load(audio_path, duration=10)
@@ -30,7 +29,7 @@ def extract_features(audio_path):
     S = librosa.feature.melspectrogram(y, sr=sr, n_fft=2048,
                                        hop_length=865,
                                        n_mels=128)
-    mfccs = np.transpose(librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=80))
+    mfccs = np.transpose(librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=40))
 
     #     mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
     return mfccs
