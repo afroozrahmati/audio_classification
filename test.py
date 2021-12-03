@@ -105,6 +105,7 @@ def load_processed_data(client_name):
 # Load CIFAR-10 dataset
 # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
 client_name ='client1' #sys.argv[1]  # #+ sys.argv[0]
+print(client_name)
 x_train, y_train, x_test, y_test = load_processed_data(client_name)  # args.partition)
 
 model = get_model(128, 40)
