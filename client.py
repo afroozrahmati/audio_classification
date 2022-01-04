@@ -85,20 +85,39 @@ def get_model(timesteps , n_features ):
     print('Model compiled.           ')
     return model
 
-def load_processed_data(client_name):
-    data_process= clients_data_generation(client_name)
-    x_train,y_train,x_test,y_test = data_process.get_clients_data()
+def load_data(client_name):
+    clientdata = clients_data_generation()
+    data_x, data_y = clientdata.get_clients_data('client1')
+    return data_x, data_y
 
-    print("train shape: ", np.shape(x_train))
-    print("test shape: ", np.shape(x_test))
-    print("train label shape: ", y_train.shape)
-    print("test label shape: ", y_test.shape)
+def target_distribution(q):  # target distribution P which enhances the discrimination of soft label Q
+    weight = q ** 2 / q.sum(0)
+    return (weight.T / weight.sum(1)).T
 
-    x_train = np.asarray(x_train)
-    x_test = np.nan_to_num(x_test)
-    x_test = np.asarray(x_test)
-    return x_train,y_train,x_test, y_test
 
+def normalize(img):
+    '''
+    Normalizes an array
+    (subtract mean and divide by standard deviation)
+    '''
+    eps = 0.001
+    #print(np.shape(img))
+    if np.std(img) != 0:
+        img = (img - np.mean(img)) / np.std(img)
+    else:
+        img = (img - np.mean(img)) / eps
+    return img
+
+def normalize_dataset(x):
+    '''
+    Normalizes list of arrays
+    (subtract mean and divide by standard deviation)
+    '''
+    normalized_dataset = []
+    for img in x:
+        normalized = normalize(img)
+        normalized_dataset.append(normalized)
+    return normalized_dataset
 
 if __name__ == "__main__":
     # Load and compile Keras model
@@ -108,7 +127,36 @@ if __name__ == "__main__":
     # Load CIFAR-10 dataset
     #(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
     client_name =  sys.argv[1] #    #+ sys.argv[0]
-    x_train, y_train, x_test, y_test = load_processed_data(client_name) #args.partition)
+    data_x, data_y = load_data(client_name)
+
+    data_x = np.array(data_x)
+    data_x = np.nan_to_num(data_x)
+    data_x = normalize_dataset(data_x)
+    data_y = np.asarray(data_y)
+    print(np.shape(data_x))
+    print(np.shape(data_y))
+
+    optimizer = Adam(0.0001, beta_1=0.1, beta_2=0.001, amsgrad=True)
+    # optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
+
+    n_classes = 2
+    batch_size = 64
+    epochs = 200
+    # gamma =4
+    callbacks = EarlyStopping(monitor='val_clustering_accuracy', mode='max',
+                              verbose=2, patience=800, restore_best_weights=True)
+
+    model_dir = './model/'
+    x_train, x_test, y_train, y_test = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
+    timesteps = np.shape(x_train)[1]
+    n_features = np.shape(x_train)[2]
+    print((timesteps, n_features))
+
+    x_train = np.asarray(x_train)
+    x_test = np.nan_to_num(x_test)
+    x_test = np.asarray(x_test)
+
+
 
     # Define Flower client
     class CifarClient(fl.client.NumPyClient):
@@ -121,7 +169,7 @@ if __name__ == "__main__":
                                       restore_best_weights=True)
             history = model.fit(x_train,
                                      y={'clustering': y_train, 'decoder_out': x_train},
-                                     epochs=2,
+                                     epochs=1,
                                      validation_split=0.2,
                                      # validation_data=(x_test, (y_test, x_test)),
                                      batch_size=64,
@@ -151,4 +199,4 @@ if __name__ == "__main__":
             return kld_loss, len(x_test), {"accuracy": accuracy}
 
     # Start Flower client
-    fl.client.start_numpy_client("172.29.80.1:8080", client=CifarClient())
+    fl.client.start_numpy_client("172.18.160.1:8080", client=CifarClient())

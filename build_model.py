@@ -71,13 +71,14 @@ data_x = normalize_dataset(data_x)
 data_y = np.asarray(data_y)
 print(np.shape(data_x))
 
+print(np.shape(data_y))
 
 optimizer = Adam(0.0001, beta_1=0.1, beta_2=0.001, amsgrad=True)
 #optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
 
 n_classes = 2
 batch_size = 64
-epochs = 400
+epochs = 200
 #gamma =4
 callbacks = EarlyStopping(monitor='val_clustering_accuracy', mode='max',
                               verbose=2, patience=800, restore_best_weights=True)
