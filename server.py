@@ -1,3 +1,4 @@
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import os
 import flwr as fl
 import tensorflow as tf
@@ -83,27 +84,39 @@ def get_model(timesteps , n_features ):
     print('Model compiled.           ')
     return model
 
-def load_processed_data(file_path):
-    data_process= data_processing()
-    x_train,y_train,x_test,y_test = data_process.load_data_total(file_path)
+def load_processed_data(total_no_clients):
+
+    pathnormal= './data/physionet/normal/'
+    pathabnormal = './data/physionet/abnormal/'
+    p = preprocessing()
+    #last client index is for server evaluation data
+    x_train,y_train,x_test,y_test = p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
 
     print("train shape: ", np.shape(x_train))
     print("test shape: ", np.shape(x_test))
-    print("train label shape: ", y_train.shape)
-    print("test label shape: ", y_test.shape)
+    print("train label shape: ",np.shape(y_train))
+    print("test label shape: ",np.shape(y_test) )
 
     x_train = np.asarray(x_train)
-    x_test = np.nan_to_num(x_test)
+    x_train = np.nan_to_num(x_train)
     x_test = np.asarray(x_test)
+    x_test = np.nan_to_num(x_test)
     return x_train,y_train,x_test, y_test
 
 def main() -> None:
     # Load and compile model for
     # 1. server-side parameter initialization
     # 2. server-side parameter evaluation
-    model= get_model(1,23)
+    clients_count = 10 #int(sys.argv[1]) #10 #sys.argv[2]
+    x_val, y_val, _, _ = load_processed_data(clients_count)
+
+    x_val = np.asarray(x_val)
+    timesteps = np.shape(x_val)[1]
+    n_features = np.shape(x_val)[2]
+
+    model= get_model(timesteps,n_features)
     #print(sys.argv[1])
-    clients_count = int(sys.argv[1])
+    clients_count = 10 #int(sys.argv[1])
     # Create strategy
     strategy = fl.server.strategy.FedAvg(
         fraction_fit=0.3,
@@ -111,7 +124,7 @@ def main() -> None:
         min_fit_clients=3,
         min_eval_clients=2,
         min_available_clients=clients_count,
-        eval_fn=get_eval_fn(model),
+        eval_fn=get_eval_fn(model,x_val, y_val),
         on_fit_config_fn=fit_config,
         on_evaluate_config_fn=evaluate_config,
         initial_parameters=fl.common.weights_to_parameters(model.get_weights()),
@@ -119,23 +132,16 @@ def main() -> None:
 
 
     # Start Flower server for four rounds of federated learning
-    fl.server.start_server("192.168.1.237:8080", config={"num_rounds": 500}, strategy=strategy)
+    fl.server.start_server("192.168.1.237:8080", config={"num_rounds": 200}, strategy=strategy)
 
 
 
 
-def get_eval_fn(model):
+def get_eval_fn(model,x_val, y_val):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
-    file_path = 'D:\\UW\\RA\\Intrusion_Detection\\data\\df_shuffled.csv'  # sys.argv[1] #    #+ sys.argv[0]
-    #file_path_abnormal = 'D:\\UW\\RA\\Intrusion_Detection\\data\\abnormal.csv'  # sys.argv[2] #  #+ sys.argv[1]
-    x_train, y_train, x_test, y_test = load_processed_data(file_path)  # args.partition)
-    #(x_train, y_train), _ = tf.keras.datasets.cifar10.load_data()
-    clients_count = int(sys.argv[1]) #10 #sys.argv[2]
-    const_val = len(x_train) // clients_count
-    print(len(x_train)-const_val,len(x_train)+1)
-    x_val, y_val = x_train[len(x_train)-const_val:len(x_train)+1], y_train[len(x_train)-const_val:len(x_train)+1]      #x_test, y_test
+
 
     # The `evaluate` function will be called after every round
     def evaluate(
@@ -151,16 +157,11 @@ def get_eval_fn(model):
         accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
         # mse_loss = np.round(mean_squared_error(y_arg_test, y_pred_test), 5)
         kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
-        nmi_test = np.round(normalized_mutual_info_score(y_arg_test, y_pred_test), 5)
-        ari_test = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
-        y_test_one = np.argmax(y_val, axis=1)
-        cm = confusion_matrix(y_test_one,y_pred_test)
-        #print(len(x_test))
+        # nmi_test = np.round(normalized_mutual_info_score(y_arg_test, y_pred_test), 5)
+        # ari_test = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
+        # y_test_one = np.argmax(y_val, axis=1)
+
         print("kld_loss=",kld_loss,"accuracy=",accuracy)
-        # s = str(kld_loss) +',' + str(accuracy) + ',' + str(nmi_test) + ',' + str(ari_test) + '\n'
-        # with open('D:\\UW\\RA\\Intrusion_Detection\\result_fl_flower.txt', 'a') as f:
-        #     f.write(s)
-        #,"nmi_test":nmi_test,"ari_test":ari_test,"confusion_matrix":cm
         return kld_loss, {"accuracy": accuracy}
 
     return evaluate
