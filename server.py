@@ -90,7 +90,8 @@ def load_processed_data(total_no_clients):
     pathabnormal = './data/physionet/abnormal/'
     p = preprocessing()
     #last client index is for server evaluation data
-    x_train, x_test, y_train, y_test = p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
+    x_train, x_test, y_train, y_test = p.load_processed_partition(total_no_clients, total_no_clients)
+    #p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
 
     print("train shape: ", np.shape(x_train))
     print("test shape: ", np.shape(x_test))
@@ -111,7 +112,7 @@ def main() -> None:
     # Load and compile model for
     # 1. server-side parameter initialization
     # 2. server-side parameter evaluation
-    clients_count = 10 #int(sys.argv[1]) #10 #sys.argv[2]
+    clients_count = int(sys.argv[1])
     x_val, _, y_val, _ = load_processed_data(clients_count)
 
     x_val = np.asarray(x_val)
@@ -121,13 +122,13 @@ def main() -> None:
     print("n_features:", n_features)
     model= get_model(timesteps,n_features)
     #print(sys.argv[1])
-    clients_count = 10 #int(sys.argv[1])
+
     # Create strategy
     strategy = fl.server.strategy.FedAvg(
         fraction_fit=0.3,
         fraction_eval=0.2,
-        min_fit_clients=3,
-        min_eval_clients=2,
+        min_fit_clients=5,
+        min_eval_clients=3,
         min_available_clients=clients_count,
         eval_fn=get_eval_fn(model,x_val, y_val),
         on_fit_config_fn=fit_config,
@@ -137,7 +138,7 @@ def main() -> None:
 
 
     # Start Flower server for four rounds of federated learning
-    fl.server.start_server("192.168.1.237:8080", config={"num_rounds": 200}, strategy=strategy)
+    fl.server.start_server("192.168.1.237:8080", config={"num_rounds": 400}, strategy=strategy)
 
 
 

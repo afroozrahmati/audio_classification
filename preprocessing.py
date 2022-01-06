@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import os
 from sklearn.model_selection import train_test_split
+import pickle
 
 class preprocessing:
     def __init__(self,sr = 22050,duration = 5):
@@ -131,14 +132,70 @@ class preprocessing:
         x_train, x_test, y_train, y_test = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
         return x_train, x_test, y_train, y_test
 
+    def process_files(self,pathnormal,pathabnormal):
+
+        # pathnormal= './data/physionet/normal/'
+        # pathabnormal = './data/physionet/abnormal/'
+        # we separate some part of our data for server evaluation, so we increase the No. of clients and keep last bunch for server evaluation purpose
+
+        x_data_normal = []
+        y_data_normal =[]
+        x_data_abnormal = []
+        y_data_abnormal =[]
+
+        files = glob.glob(pathnormal + '/*.wav')
+
+        for file in files:
+            x_data_normal.append(self.extract_features(file))
+            y_data_normal.append([1,0])
+            print(file)
+
+
+        files = glob.glob(pathabnormal + '/*.wav')
+        for file in files:
+            x_data_abnormal.append(self.extract_features(file))
+            y_data_abnormal.append([0,1])
+            print(file)
+
+        data_x = np.concatenate((x_data_normal, x_data_abnormal))
+        data_y = np.concatenate((y_data_normal, y_data_abnormal))
+
+        print("shape xdata:", np.shape(data_x))
+        print("shape y data:", np.shape(data_y))
+
+        with open('physionet_MFCC40t_X.pkl', 'wb') as o:
+            pickle.dump(data_x, o, pickle.HIGHEST_PROTOCOL)
+
+        with open('physionet_MFCC40t_Y.pkl', 'wb') as o:
+            pickle.dump(data_y, o, pickle.HIGHEST_PROTOCOL)
+
+
+
+    def load_processed_partition(self,client_index, total_no_clients):
+        with open('physionet_MFCC40t_X.pkl', 'rb') as input:
+            data_x = pickle.load(input)
+
+        with open('physionet_MFCC40t_Y.pkl', 'rb') as input:
+            data_y = pickle.load(input)
+
+        data_x = np.array(data_x)
+        data_x = np.nan_to_num(data_x)
+        data_x = self.normalize_dataset(data_x)
+        data_y = np.asarray(data_y)
+
+        total_no_clients+=1
+
+        counts= len(data_x)//total_no_clients
+        start = client_index * counts
+        end = ( client_index + 1 ) * counts
+
+        x_train, x_test, y_train, y_test = train_test_split(data_x[start:end], data_y[start:end], test_size=0.2, random_state=42)
+        return x_train, x_test, y_train, y_test
+
 
 # print("shape xdata:", np.shape(data_x) )
 # print("shape y data:", np.shape(data_y) )
 #
-# import pickle
 #
-# with open('physionet_MFCC40t_X.pkl', 'wb') as o:
-#     pickle.dump(data_x, o, pickle.HIGHEST_PROTOCOL)
 #
-# with open('physionet_MFCC40t_Y.pkl', 'wb') as o:
-#     pickle.dump(data_y, o, pickle.HIGHEST_PROTOCOL)
+

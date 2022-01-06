@@ -1,4 +1,3 @@
-import os
 import flwr as fl
 import tensorflow as tf
 import argparse
@@ -45,11 +44,85 @@ from plots import produce_plot
 from ClusteringLayer import *
 from clients_data_generation import *
 
-# Make TensorFlow log less verbose
+# Make TensorFlow logs less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
+
+# Define Flower client
+class CifarClient(fl.client.NumPyClient):
+    def __init__(self, model, x_train, y_train, x_test, y_test):
+        self.model = model
+        self.x_train, self.y_train = x_train, y_train
+        self.x_test, self.y_test = x_test, y_test
+
+    def get_parameters(self):
+        """Get parameters of the local model."""
+        raise Exception("Not implemented (server-side parameter initialization)")
+
+    def fit(self, parameters, config):
+        """Train parameters on the locally held training set."""
+
+        # Update local model parameters
+        self.model.set_weights(parameters)
+
+        # Get hyperparameters for this round
+        batch_size: int = config["batch_size"]
+        epochs: int = config["local_epochs"]
+
+        # Train the model using hyperparameters from config
+        history = self.model.fit(self.x_train,
+                y={'clustering': self.y_train, 'decoder_out': self.x_train},
+                epochs=epochs,
+                validation_split=0.1,
+                # validation_data=(x_test, (y_test, x_test)),
+                batch_size=batch_size,
+                )
+
+
+        # history = self.model.fit(
+        #     self.x_train,
+        #     self.y_train,
+        #     batch_size,
+        #     epochs,
+        #     validation_split=0.1,
+        # )
+
+        # Return updated model parameters and results
+        parameters_prime = self.model.get_weights()
+        num_examples_train = len(self.x_train)
+        results = {
+            "loss": history.history["loss"][0],
+            "accuracy": history.history["clustering_accuracy"][0],
+            "val_loss": history.history["val_loss"][0],
+            "val_accuracy": history.history["val_clustering_accuracy"][0],
+        }
+        return parameters_prime, num_examples_train, results
+
+    def evaluate(self, parameters, config):
+        """Evaluate parameters on the locally held test set."""
+
+        # Update local model with global parameters
+        self.model.set_weights(parameters)
+
+        # Get config values
+        steps: int = config["val_steps"]
+
+        # Evaluate global model parameters on the local test data and return results
+        #loss, accuracy = self.model.evaluate(self.x_test, self.y_test, 32, steps=steps)
+
+        q_t, _ = self.model.predict(self.x_test, verbose=0)
+        y_pred_test = np.argmax(q_t, axis=1)
+        y_arg_test = np.argmax(self.y_test, axis=1)
+        accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
+        # mse_loss = np.round(mean_squared_error(y_arg_test, y_pred_test), 5)
+        kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
+
+        num_examples_test = len(self.x_test)
+        return kld_loss, num_examples_test, {"accuracy": accuracy}
+
+
 def get_model(timesteps , n_features ):
-    gamma = 6
+    gamma = 1
     # tf.keras.backend.clear_session()
     print('Setting Up Model for training')
     print(gamma)
@@ -76,127 +149,73 @@ def get_model(timesteps , n_features ):
     clustering_model = Model(inputs=inputs, outputs=clustering)
 
     # plot_model(model, show_shapes=True)
-    model.summary()
+    #model.summary()
     optimizer = Adam(0.005, beta_1=0.1, beta_2=0.001, amsgrad=True)
     model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
-                  loss_weights=[gamma, 1], optimizer=optimizer,
+                  loss_weights=[gamma, 1], optimizer='adam',
                   metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
 
     print('Model compiled.           ')
     return model
 
-def load_data(client_name):
-    clientdata = clients_data_generation()
-    data_x, data_y = clientdata.get_clients_data('client1')
-    return data_x, data_y
-
-def target_distribution(q):  # target distribution P which enhances the discrimination of soft label Q
-    weight = q ** 2 / q.sum(0)
-    return (weight.T / weight.sum(1)).T
-
-
-def normalize(img):
-    '''
-    Normalizes an array
-    (subtract mean and divide by standard deviation)
-    '''
-    eps = 0.001
-    #print(np.shape(img))
-    if np.std(img) != 0:
-        img = (img - np.mean(img)) / np.std(img)
-    else:
-        img = (img - np.mean(img)) / eps
-    return img
-
-def normalize_dataset(x):
-    '''
-    Normalizes list of arrays
-    (subtract mean and divide by standard deviation)
-    '''
-    normalized_dataset = []
-    for img in x:
-        normalized = normalize(img)
-        normalized_dataset.append(normalized)
-    return normalized_dataset
-
-if __name__ == "__main__":
+def main() -> None:
+    # Parse command line argument `partition`
+    # parser = argparse.ArgumentParser(description="Flower")
+    # parser.add_argument("--partition", type=int, choices=range(0, 10), required=True)
+    # args = parser.parse_args()
+    #file_path_normal =  sys.argv[1] #    #+ sys.argv[0]
+    #file_path_abnormal = sys.argv[2] #  #+ sys.argv[1]
     # Load and compile Keras model
-    model= get_model(128,40)
-    #model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
 
-    # Load CIFAR-10 dataset
-    #(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-    client_name =  sys.argv[1] #    #+ sys.argv[0]
-    data_x, data_y = load_data(client_name)
+    # parser = argparse.ArgumentParser(description="Flower")
+    # parser.add_argument("--partition", type=int, choices=range(0, 10), required=True)
+    # args = parser.parse_args()
 
-    data_x = np.array(data_x)
-    data_x = np.nan_to_num(data_x)
-    data_x = normalize_dataset(data_x)
-    data_y = np.asarray(data_y)
-    print(np.shape(data_x))
-    print(np.shape(data_y))
-
-    optimizer = Adam(0.0001, beta_1=0.1, beta_2=0.001, amsgrad=True)
-    # optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
-
-    n_classes = 2
-    batch_size = 64
-    epochs = 200
-    # gamma =4
-    callbacks = EarlyStopping(monitor='val_clustering_accuracy', mode='max',
-                              verbose=2, patience=800, restore_best_weights=True)
-
-    model_dir = './model/'
-    x_train, x_test, y_train, y_test = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
+    idx = int(sys.argv[1])
+    clients_count=int(sys.argv[2])
+    x_train, x_test, y_train, y_test  = load_processed_data(idx,clients_count)
+    x_train = np.asarray(x_train)
     timesteps = np.shape(x_train)[1]
     n_features = np.shape(x_train)[2]
-    print((timesteps, n_features))
-
-    x_train = np.asarray(x_train)
-    x_test = np.nan_to_num(x_test)
-    x_test = np.asarray(x_test)
+    print("timesteps:",timesteps)
+    print("n_features:", n_features)
+    model= get_model(timesteps,n_features)
 
 
+    #clients_count = 10 #int(sys.argv[1]) #10 #sys.argv[2]
 
-    # Define Flower client
-    class CifarClient(fl.client.NumPyClient):
-        def get_parameters(self):  # type: ignore
-            return model.get_weights()
-
-        def fit(self, parameters, config):  # type: ignore
-            model.set_weights(parameters)
-            callbacks = EarlyStopping(monitor='val_clustering_accuracy', mode='max', verbose=2, patience=800,
-                                      restore_best_weights=True)
-            history = model.fit(x_train,
-                                     y={'clustering': y_train, 'decoder_out': x_train},
-                                     epochs=1,
-                                     validation_split=0.2,
-                                     # validation_data=(x_test, (y_test, x_test)),
-                                     batch_size=64,
-                                     verbose=2,
-                                     callbacks=callbacks
-                                     )
-
-
-            #model.fit(x_train, y_train, epochs=1, batch_size=32)
-            return model.get_weights(), len(x_train), {}
-
-        def evaluate(self, parameters, config):  # type: ignore
-            model.set_weights(parameters)
-
-            # Evaluate global model parameters on the local test data and return results
-            q_t, _ = model.predict(x_test, verbose=0)
-            y_pred_test = np.argmax(q_t, axis=1)
-            y_arg_test = np.argmax(y_test, axis=1)
-            accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
-            #mse_loss = np.round(mean_squared_error(y_arg_test, y_pred_test), 5)
-            kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
-
-            loss=0.01
-            print(len(x_test))
-            print(accuracy)
-            #loss, accuracy = model.evaluate(x_test, y_test)
-            return kld_loss, len(x_test), {"accuracy": accuracy}
 
     # Start Flower client
-    fl.client.start_numpy_client("172.18.160.1:8080", client=CifarClient())
+    client = CifarClient(model, x_train, y_train, x_test, y_test)
+    fl.client.start_numpy_client("192.168.1.237:8080", client=client)
+
+
+def load_processed_data(clinet_index,total_no_clients):
+
+    pathnormal= './data/physionet/normal/'
+    pathabnormal = './data/physionet/abnormal/'
+    p = preprocessing()
+    #last client index is for server evaluation data
+    x_train, x_test, y_train, y_test = p.load_processed_partition(clinet_index, total_no_clients)
+    #p.load_data(pathnormal, pathabnormal, clinet_index, total_no_clients)
+
+    print("train shape: ", np.shape(x_train))
+    print("test shape: ", np.shape(x_test))
+    print("train label shape: ",np.shape(y_train))
+    print("test label shape: ",np.shape(y_test) )
+
+    x_train = np.asarray(x_train)
+    x_train = np.nan_to_num(x_train)
+    x_test = np.asarray(x_test)
+    x_test = np.nan_to_num(x_test)
+
+    y_train = np.asarray(y_train)
+    y_train = np.nan_to_num(y_train)
+
+    return x_train, x_test, y_train, y_test
+
+
+
+
+if __name__ == "__main__":
+    main()
