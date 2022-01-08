@@ -130,3 +130,10 @@ Gamma=1, Epochs=200, Lr=0.0001, NMI=0.57375, ARI=0.73704, Train accuracy=0.93789
 Gamma=1, Epochs=150, Lr=0.0001, NMI=0.60297, ARI=0.75936, Train accuracy=0.94444, Test accuracy=0.89969
 Gamma=1, Epochs=150, Lr=0.0001, NMI=0.54963, ARI=0.71576, Train accuracy=0.9321, Test accuracy=0.88426
 Gamma=2, Epochs=150, Lr=0.0001, NMI=0.52576, ARI=0.69735, Train accuracy=0.92824, Test accuracy=0.87654
+
+--------------------------MFCC=80 , timesteps=128---------------------------
+Gamma=0, Epochs=150, Lr=0.0001, NMI=0.0, ARI=0.0, Train accuracy=0.20563, Test accuracy=0.2037
+Gamma=0.5, Epochs=150, Lr=0.0001, NMI=0.34883, ARI=0.53211, Train accuracy=0.88735, Test accuracy=0.87963
+Gamma=1, Epochs=150, Lr=0.0001, NMI=0.42126, ARI=0.60345, Train accuracy=0.90355, Test accuracy=0.87654
+Gamma=3, Epochs=150, Lr=0.0001, NMI=0.44121, ARI=0.61179, Train accuracy=0.91049, Test accuracy=0.8966
+Gamma=5, Epochs=150, Lr=0.0001, NMI=0.63715, ARI=0.78444, Train accuracy=0.94946, Test accuracy=0.88426

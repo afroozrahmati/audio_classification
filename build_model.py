@@ -59,10 +59,10 @@ def target_distribution(q):  # target distribution P which enhances the discrimi
     weight = q ** 2 / q.sum(0)
     return (weight.T / weight.sum(1)).T
 
-with open('physionet_MFCC40t_X.pkl', 'rb') as input:
+with open('physionet_MFCC80t_X.pkl', 'rb') as input:
     data_x = pickle.load(input)
 
-with open('physionet_MFCC40t_Y.pkl', 'rb') as input:
+with open('physionet_MFCC80t_Y.pkl', 'rb') as input:
     data_y = pickle.load(input)
 
 data_x = np.array(data_x)
@@ -78,7 +78,7 @@ optimizer = Adam(0.0001, beta_1=0.1, beta_2=0.001, amsgrad=True)
 
 n_classes = 2
 batch_size = 64
-epochs = 150
+epochs = 200
 #gamma =4
 callbacks = EarlyStopping(monitor='val_clustering_accuracy', mode='max',
                               verbose=2, patience=800, restore_best_weights=True)
@@ -93,7 +93,7 @@ x_train = np.asarray(x_train)
 x_test = np.nan_to_num(x_test)
 x_test = np.asarray(x_test)
 
-for gamma in  [1,2,4,6,7,9,10]:
+for gamma in  [7,9,10]:
     os.chdir('D:\\UW\\Final thesis\\audio_classification')
     now = datetime.now() # current date and time
     now =now.strftime("%m")+'_'+now.strftime("%d")+'_'+now.strftime("%Y")+'_'+now.strftime("%H")+'_'+now.strftime("%M")+'_'+now.strftime("%S")
