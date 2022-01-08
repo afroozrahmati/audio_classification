@@ -46,6 +46,9 @@ from plots import produce_plot
 from ClusteringLayer import *
 from clients_data_generation import *
 
+def target_distribution(q):  # target distribution P which enhances the discrimination of soft label Q
+    weight = q ** 2 / q.sum(0)
+    return (weight.T / weight.sum(1)).T
 
 def get_model(timesteps , n_features ):
     gamma = 1
@@ -112,12 +115,15 @@ def main() -> None:
     # Load and compile model for
     # 1. server-side parameter initialization
     # 2. server-side parameter evaluation
-    clients_count = int(sys.argv[1])
-    x_val, _, y_val, _ = load_processed_data(clients_count)
+    global i
+    i = 0
 
-    x_val = np.asarray(x_val)
-    timesteps = np.shape(x_val)[1]
-    n_features = np.shape(x_val)[2]
+    clients_count = int(sys.argv[1])
+    x_train, x_test, y_train, y_test= load_processed_data(clients_count)
+
+    x_val = np.asarray(x_train)
+    timesteps = np.shape(x_train)[1]
+    n_features = np.shape(x_train)[2]
     print("timesteps:",timesteps)
     print("n_features:", n_features)
     model= get_model(timesteps,n_features)
@@ -127,10 +133,10 @@ def main() -> None:
     strategy = fl.server.strategy.FedAvg(
         fraction_fit=0.3,
         fraction_eval=0.2,
-        min_fit_clients=5,
-        min_eval_clients=3,
+        min_fit_clients=int(sys.argv[1]),
+        min_eval_clients=int(sys.argv[1]),
         min_available_clients=clients_count,
-        eval_fn=get_eval_fn(model,x_val, y_val),
+        eval_fn=get_eval_fn(model,x_train, x_test, y_train, y_test),
         on_fit_config_fn=fit_config,
         on_evaluate_config_fn=evaluate_config,
         initial_parameters=fl.common.weights_to_parameters(model.get_weights()),
@@ -138,12 +144,12 @@ def main() -> None:
 
 
     # Start Flower server for four rounds of federated learning
-    fl.server.start_server("192.168.1.237:8080", config={"num_rounds": 400}, strategy=strategy)
+    fl.server.start_server("192.168.1.237:8080", config={"num_rounds": int(sys.argv[2])}, strategy=strategy)
 
 
 
 
-def get_eval_fn(model,x_val, y_val):
+def get_eval_fn(model,x_train, x_test, y_train, y_test):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
@@ -157,17 +163,37 @@ def get_eval_fn(model,x_val, y_val):
 
         print("called evaluation")
 
-        q_t, _ = model.predict(x_val, verbose=2)
-        y_pred_test = np.argmax(q_t, axis=1)
-        y_arg_test = np.argmax(y_val, axis=1)
-        accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
-        # mse_loss = np.round(mean_squared_error(y_arg_test, y_pred_test), 5)
-        kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
-        # nmi_test = np.round(normalized_mutual_info_score(y_arg_test, y_pred_test), 5)
-        # ari_test = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
-        # y_test_one = np.argmax(y_val, axis=1)
 
-        print("kld_loss=",kld_loss,"accuracy=",accuracy)
+        #p = target_distribution(q)
+
+        q, _ = model.predict(x_train, verbose=0)
+        q_t, _ = model.predict(x_test, verbose=0)
+        p = target_distribution(q)
+
+        y_pred = np.argmax(q, axis=1)
+        y_arg = np.argmax(y_train, axis=1)
+        y_pred_test = np.argmax(q_t, axis=1)
+        y_arg_test = np.argmax(y_test, axis=1)
+        # acc = np.sum(y_pred == y_arg).astype(np.float32) / y_pred.shape[0]
+        # testAcc = np.sum(y_pred_test == y_arg_test).astype(np.float32) / y_pred_test.shape[0]
+        accuracy = np.round(accuracy_score(y_arg, y_pred), 5)
+        test_accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
+        kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
+        nmi = np.round(normalized_mutual_info_score(y_arg, y_pred), 5)
+        nmi_test = np.round(normalized_mutual_info_score(y_arg_test, y_pred_test), 5)
+        ari = np.round(adjusted_rand_score(y_arg, y_pred), 5)
+        ari_test = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
+
+        clients_count = sys.argv[1]
+        epochs = sys.argv[2]
+        batch_size = sys.argv[3]
+        global i
+        i+=1
+        output=clients_count+','+epochs+','+batch_size+','+str(i)+','+str(nmi)+','+str(ari)+','+str(accuracy)+','+str(test_accuracy)+'\n'
+        with open('result.csv', 'a') as f:
+            f.write(output)
+
+        print("kld_loss=",kld_loss,"accuracy=",test_accuracy)
         return kld_loss, {"accuracy": accuracy}
 
     return evaluate
@@ -179,7 +205,7 @@ def fit_config(rnd: int):
     local epoch, increase to two local epochs afterwards.
     """
     config = {
-        "batch_size": 64,
+        "batch_size": int(sys.argv[3]),
         "local_epochs": 1 if rnd < 2 else 2,
     }
     return config

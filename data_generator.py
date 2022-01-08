@@ -2,6 +2,7 @@ from preprocessing import *
 import glob
 import numpy as np
 import pickle
+import random
 
 
 preprocess = preprocessing()
@@ -36,12 +37,19 @@ print("shape y abnormal data:", np.shape(y_data_abnormal)  )
 data_x = np.concatenate((x_data_normal,x_data_abnormal))
 data_y = np.concatenate((y_data_normal,y_data_abnormal))
 
+# Shuffle two lists with same order
+# Using zip() + * operator + shuffle()
+temp = list(zip(data_x, data_y))
+random.shuffle(temp)
+data_x, data_y = zip(*temp)
+
+
 print("shape xdata:", np.shape(data_x) )
 print("shape y data:", np.shape(data_y) )
 
 
-with open('physionet_MFCC40t_X.pkl', 'wb') as o:
+with open('physionet_MFCC80t_X.pkl', 'wb') as o:
     pickle.dump(data_x, o, pickle.HIGHEST_PROTOCOL)
 
-with open('physionet_MFCC40t_Y.pkl', 'wb') as o:
+with open('physionet_MFCC80t_Y.pkl', 'wb') as o:
     pickle.dump(data_y, o, pickle.HIGHEST_PROTOCOL)

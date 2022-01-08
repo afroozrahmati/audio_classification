@@ -122,3 +122,11 @@ Gamma=6, Epochs=200, Lr=0.0001, NMI=0.46897, ARI=0.6406, Train accuracy=0.91127,
 Gamma=7, Epochs=200, Lr=0.0001, NMI=0.32172, ARI=0.50307, Train accuracy=0.87847, Test accuracy=0.88117
 Gamma=9, Epochs=200, Lr=0.0001, NMI=0.50527, ARI=0.67156, Train accuracy=0.924, Test accuracy=0.88117
 Gamma=10, Epochs=200, Lr=0.0001, NMI=0.58396, ARI=0.74251, Train accuracy=0.93866, Test accuracy=0.87654
+Gamma=1, Epochs=200, Lr=0.0001, NMI=0.48915, ARI=0.66535, Train accuracy=0.91975, Test accuracy=0.91358
+Gamma=1, Epochs=400, Lr=0.0001, NMI=0.49086, ARI=0.65809, Train accuracy=0.9159, Test accuracy=0.8966
+Gamma=1, Epochs=200, Lr=0.0001, NMI=0.58731, ARI=0.74444, Train accuracy=0.93904, Test accuracy=0.82562
+Gamma=2, Epochs=200, Lr=0.0001, NMI=0.56394, ARI=0.72201, Train accuracy=0.93287, Test accuracy=0.81944
+Gamma=1, Epochs=200, Lr=0.0001, NMI=0.57375, ARI=0.73704, Train accuracy=0.93789, Test accuracy=0.88117
+Gamma=1, Epochs=150, Lr=0.0001, NMI=0.60297, ARI=0.75936, Train accuracy=0.94444, Test accuracy=0.89969
+Gamma=1, Epochs=150, Lr=0.0001, NMI=0.54963, ARI=0.71576, Train accuracy=0.9321, Test accuracy=0.88426
+Gamma=2, Epochs=150, Lr=0.0001, NMI=0.52576, ARI=0.69735, Train accuracy=0.92824, Test accuracy=0.87654

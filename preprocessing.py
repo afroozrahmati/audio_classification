@@ -9,6 +9,7 @@ from scipy import signal
 import os
 from sklearn.model_selection import train_test_split
 import pickle
+import random
 
 class preprocessing:
     def __init__(self,sr = 22050,duration = 5):
@@ -39,10 +40,11 @@ class preprocessing:
           normalized_dataset.append(normalized)
       return normalized_dataset
 
+
     # 865
     def extract_features(self,audio_path):
         #     y, sr = librosa.load(audio_path, duration=3)
-        y, sr = librosa.load(audio_path, duration=10)
+        y, sr = librosa.load(audio_path, duration=5)
         #     y = librosa.util.normalize(y)
 
         if 0 < len(y):  # workaround: 0 length causes error
@@ -57,8 +59,8 @@ class preprocessing:
         S = librosa.feature.melspectrogram(y, sr=sr, n_fft=2048,
                                            hop_length=865,
                                            n_mels=128)
-        mfccs = np.transpose(librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=40))
-
+        mfccs = np.transpose(librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=80))
+        #mfccs = librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=40)
         #     mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
         return mfccs
 
@@ -163,19 +165,18 @@ class preprocessing:
         print("shape xdata:", np.shape(data_x))
         print("shape y data:", np.shape(data_y))
 
-        with open('physionet_MFCC40t_X.pkl', 'wb') as o:
+        with open('physionet_MFCC80t_X.pkl', 'wb') as o:
             pickle.dump(data_x, o, pickle.HIGHEST_PROTOCOL)
 
-        with open('physionet_MFCC40t_Y.pkl', 'wb') as o:
+        with open('physionet_MFCC80t_Y.pkl', 'wb') as o:
             pickle.dump(data_y, o, pickle.HIGHEST_PROTOCOL)
 
 
-
-    def load_processed_partition(self,client_index, total_no_clients):
-        with open('physionet_MFCC40t_X.pkl', 'rb') as input:
+    def load_processed_data(self):
+        with open('physionet_MFCC80t_X.pkl', 'rb') as input:
             data_x = pickle.load(input)
 
-        with open('physionet_MFCC40t_Y.pkl', 'rb') as input:
+        with open('physionet_MFCC80t_Y.pkl', 'rb') as input:
             data_y = pickle.load(input)
 
         data_x = np.array(data_x)
@@ -183,11 +184,27 @@ class preprocessing:
         data_x = self.normalize_dataset(data_x)
         data_y = np.asarray(data_y)
 
-        total_no_clients+=1
+        x_train, x_test, y_train, y_test = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
+        return x_train, x_test, y_train, y_test
+
+
+    def load_processed_partition(self,client_index, total_no_clients):
+        with open('physionet_MFCC80t_X.pkl', 'rb') as input:
+            data_x = pickle.load(input)
+
+        with open('physionet_MFCC80t_Y.pkl', 'rb') as input:
+            data_y = pickle.load(input)
+
+        total_no_clients += 1
 
         counts= len(data_x)//total_no_clients
         start = client_index * counts
         end = ( client_index + 1 ) * counts
+
+        data_x = np.array(data_x)
+        data_x = np.nan_to_num(data_x)
+        data_x = self.normalize_dataset(data_x)
+        data_y = np.asarray(data_y)
 
         x_train, x_test, y_train, y_test = train_test_split(data_x[start:end], data_y[start:end], test_size=0.2, random_state=42)
         return x_train, x_test, y_train, y_test

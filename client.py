@@ -48,6 +48,10 @@ from clients_data_generation import *
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
+def target_distribution(q):  # target distribution P which enhances the discrimination of soft label Q
+    weight = q ** 2 / q.sum(0)
+    return (weight.T / weight.sum(1)).T
+
 # Define Flower client
 class CifarClient(fl.client.NumPyClient):
     def __init__(self, model, x_train, y_train, x_test, y_test):
@@ -73,9 +77,10 @@ class CifarClient(fl.client.NumPyClient):
         history = self.model.fit(self.x_train,
                 y={'clustering': self.y_train, 'decoder_out': self.x_train},
                 epochs=epochs,
-                validation_split=0.1,
+                validation_split=0.2,
                 # validation_data=(x_test, (y_test, x_test)),
                 batch_size=batch_size,
+                verbose=2
                 )
 
 
@@ -110,12 +115,24 @@ class CifarClient(fl.client.NumPyClient):
         # Evaluate global model parameters on the local test data and return results
         #loss, accuracy = self.model.evaluate(self.x_test, self.y_test, 32, steps=steps)
 
+        q, _ = self.model.predict(self.x_train, verbose=0)
         q_t, _ = self.model.predict(self.x_test, verbose=0)
+        p = target_distribution(q)
+
+        y_pred = np.argmax(q, axis=1)
+        y_arg = np.argmax(self.y_train, axis=1)
         y_pred_test = np.argmax(q_t, axis=1)
         y_arg_test = np.argmax(self.y_test, axis=1)
+        # acc = np.sum(y_pred == y_arg).astype(np.float32) / y_pred.shape[0]
+        # testAcc = np.sum(y_pred_test == y_arg_test).astype(np.float32) / y_pred_test.shape[0]
+        #accuracy = np.round(accuracy_score(y_arg, y_pred), 5)
         accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
-        # mse_loss = np.round(mean_squared_error(y_arg_test, y_pred_test), 5)
         kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
+
+        # acc = np.sum(y_pred == y_arg).astype(np.float32) / y_pred.shape[0]
+        # testAcc = np.sum(y_pred_test == y_arg_test).astype(np.float32) / y_pred_test.shape[0]
+        acc = np.round(accuracy_score(y_arg, y_pred), 5)
+        testAcc = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
 
         num_examples_test = len(self.x_test)
         return kld_loss, num_examples_test, {"accuracy": accuracy}
