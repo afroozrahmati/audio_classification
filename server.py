@@ -93,9 +93,8 @@ def load_processed_data(total_no_clients):
     pathabnormal = './data/physionet/abnormal/'
     p = preprocessing()
     #last client index is for server evaluation data
-    x_train, x_test, y_train, y_test = p.load_processed_partition(total_no_clients, total_no_clients)
-    #p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
-
+    x_train, x_test, y_train, y_test = p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
+    # p.load_processed_partition(total_no_clients, total_no_clients)
     print("train shape: ", np.shape(x_train))
     print("test shape: ", np.shape(x_test))
     print("train label shape: ",np.shape(y_train))
