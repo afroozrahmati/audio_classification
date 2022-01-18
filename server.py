@@ -51,7 +51,7 @@ def target_distribution(q):  # target distribution P which enhances the discrimi
     return (weight.T / weight.sum(1)).T
 
 def get_model(timesteps , n_features ):
-    gamma = 1
+    gamma = 5
     # tf.keras.backend.clear_session()
     print('Setting Up Model for training')
     print(gamma)
@@ -79,9 +79,9 @@ def get_model(timesteps , n_features ):
 
     # plot_model(model, show_shapes=True)
     #model.summary()
-    optimizer = Adam(0.005, beta_1=0.1, beta_2=0.001, amsgrad=True)
+    optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
     model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
-                  loss_weights=[gamma, 1], optimizer='adam',
+                  loss_weights=[gamma, 1], optimizer=optimizer,
                   metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
 
     print('Model compiled.           ')
@@ -93,8 +93,11 @@ def load_processed_data(total_no_clients):
     pathabnormal = './data/physionet/abnormal/'
     p = preprocessing()
     #last client index is for server evaluation data
-    x_train, x_test, y_train, y_test = p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
-    # p.load_processed_partition(total_no_clients, total_no_clients)
+    #x_train, _, y_train, _ = p.load_processed_train_data(total_no_clients)
+
+    x_train, x_test,y_train, y_test = p.load_processed_data() #(total_no_clients, total_no_clients)
+
+#p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
     print("train shape: ", np.shape(x_train))
     print("test shape: ", np.shape(x_test))
     print("train label shape: ",np.shape(y_train))
@@ -118,11 +121,11 @@ def main() -> None:
     i = 0
 
     clients_count = int(sys.argv[1])
-    x_train, x_test, y_train, y_test= load_processed_data(clients_count)
+    _, x_val, _, y_val= load_processed_data(clients_count)
 
-    x_val = np.asarray(x_train)
-    timesteps = np.shape(x_train)[1]
-    n_features = np.shape(x_train)[2]
+    x_val = np.asarray(x_val)
+    timesteps = np.shape(x_val)[1]
+    n_features = np.shape(x_val)[2]
     print("timesteps:",timesteps)
     print("n_features:", n_features)
     model= get_model(timesteps,n_features)
@@ -130,12 +133,12 @@ def main() -> None:
 
     # Create strategy
     strategy = fl.server.strategy.FedAvg(
-        fraction_fit=0.3,
-        fraction_eval=0.2,
-        min_fit_clients=int(sys.argv[1]),
-        min_eval_clients=int(sys.argv[1]),
+        fraction_fit=  1 , #0.3,
+        fraction_eval= 1,
+        min_fit_clients=3,
+        min_eval_clients=2,
         min_available_clients=clients_count,
-        eval_fn=get_eval_fn(model,x_train, x_test, y_train, y_test),
+        eval_fn=get_eval_fn(model,x_val, y_val),
         on_fit_config_fn=fit_config,
         on_evaluate_config_fn=evaluate_config,
         initial_parameters=fl.common.weights_to_parameters(model.get_weights()),
@@ -148,7 +151,7 @@ def main() -> None:
 
 
 
-def get_eval_fn(model,x_train, x_test, y_train, y_test):
+def get_eval_fn(model,x_val, y_val):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
@@ -165,34 +168,29 @@ def get_eval_fn(model,x_train, x_test, y_train, y_test):
 
         #p = target_distribution(q)
 
-        q, _ = model.predict(x_train, verbose=0)
-        q_t, _ = model.predict(x_test, verbose=0)
+        q, _ = model.predict(x_val, verbose=0)
         p = target_distribution(q)
 
         y_pred = np.argmax(q, axis=1)
-        y_arg = np.argmax(y_train, axis=1)
-        y_pred_test = np.argmax(q_t, axis=1)
-        y_arg_test = np.argmax(y_test, axis=1)
+        y_arg = np.argmax(y_val, axis=1)
+
         # acc = np.sum(y_pred == y_arg).astype(np.float32) / y_pred.shape[0]
         # testAcc = np.sum(y_pred_test == y_arg_test).astype(np.float32) / y_pred_test.shape[0]
         accuracy = np.round(accuracy_score(y_arg, y_pred), 5)
-        test_accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
-        kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
+        kld_loss = np.round(mutual_info_score(y_arg, y_pred), 5)
         nmi = np.round(normalized_mutual_info_score(y_arg, y_pred), 5)
-        nmi_test = np.round(normalized_mutual_info_score(y_arg_test, y_pred_test), 5)
         ari = np.round(adjusted_rand_score(y_arg, y_pred), 5)
-        ari_test = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
 
         clients_count = sys.argv[1]
         epochs = sys.argv[2]
         batch_size = sys.argv[3]
         global i
         i+=1
-        output=clients_count+','+epochs+','+batch_size+','+str(i)+','+str(nmi)+','+str(ari)+','+str(accuracy)+','+str(test_accuracy)+'\n'
+        output=clients_count+','+epochs+','+batch_size+','+str(i)+','+str(nmi)+','+str(ari)+','+str(accuracy)+'\n'
         with open('result.csv', 'a') as f:
             f.write(output)
 
-        print("kld_loss=",kld_loss,"accuracy=",test_accuracy)
+        print("kld_loss=",kld_loss,"accuracy=",accuracy)
         return kld_loss, {"accuracy": accuracy}
 
     return evaluate

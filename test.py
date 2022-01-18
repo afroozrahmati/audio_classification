@@ -49,13 +49,13 @@ def target_distribution(q):  # target distribution P which enhances the discrimi
     weight = q ** 2 / q.sum(0)
     return (weight.T / weight.sum(1)).T
 
-def load_processed_data(total_no_clients):
+def load_processed_data(idx,total_no_clients):
 
     pathnormal= './data/physionet/normal/'
     pathabnormal = './data/physionet/abnormal/'
     p = preprocessing()
     #last client index is for server evaluation data
-    x_train, x_test, y_train, y_test = p.load_processed_partition(total_no_clients, total_no_clients)
+    x_train, x_test, y_train, y_test, start,end = p.load_processed_partition(idx, total_no_clients)
     #p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
 
     print("train shape: ", np.shape(x_train))
@@ -73,103 +73,33 @@ def load_processed_data(total_no_clients):
 
     return x_train, x_test, y_train, y_test
 
-def get_model(timesteps , n_features ):
-    gamma = 1
-    # tf.keras.backend.clear_session()
-    print('Setting Up Model for training')
-    print(gamma)
-
-    inputs = Input(shape=(timesteps, n_features))
-    encoder = LSTM(32, activation='tanh')(inputs)
-    encoder = Dropout(0.2)(encoder)
-    encoder = Dense(64, activation='relu')(encoder)
-    encoder = Dropout(0.2)(encoder)
-    encoder = Dense(100, activation='relu')(encoder)
-    encoder = Dropout(0.2)(encoder)
-    encoder_out = Dense(100, activation=None, name='encoder_out')(encoder)
-    clustering = ClusteringLayer(n_clusters=2, name='clustering', alpha=0.05)(encoder_out)
-    hidden = RepeatVector(timesteps, name='Hidden')(encoder_out)
-    decoder = Dense(100, activation='relu')(hidden)
-    decoder = Dense(64, activation='relu')(decoder)
-    decoder = LSTM(32, activation='tanh', return_sequences=True)(decoder)
-    output = TimeDistributed(Dense(n_features), name='decoder_out')(decoder)
-    encoder_model = Model(inputs=inputs, outputs=encoder_out)
-    # kmeans.fit(encoder_model.predict(x_train))
-
-    model = Model(inputs=inputs, outputs=[clustering, output])
-
-    clustering_model = Model(inputs=inputs, outputs=clustering)
-
-    # plot_model(model, show_shapes=True)
-    #model.summary()
-    optimizer = Adam(0.005, beta_1=0.1, beta_2=0.001, amsgrad=True)
-    model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
-                  loss_weights=[gamma, 1], optimizer='adam',
-                  metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
-
-    print('Model compiled.           ')
-    return model
-
 
 p = preprocessing()
 # p.rename_files('.\\data\\physionet\\normal')
 # p.rename_files('.\\data\\physionet\\abnormal')
-x_train, x_test, y_train, y_test  = p.load_processed_partition(4, 10) #load_processed_data(0,1)
-
+x_train, x_test, y_train, y_test, start, end = p.load_processed_train_data( 10)
+print("i=", 10)
+print("start=", start)
+print("end=", end)
 print("train shape: ", np.shape(x_train))
 print("test shape: ", np.shape(x_test))
 print("train label shape: ", np.shape(y_train))
 print("test label shape: ", np.shape(y_test))
 
-x_train = np.asarray(x_train)
-x_test = np.asarray(x_test)
+print("--------------")
 
-timesteps = np.shape(x_train)[1]
-n_features = np.shape(x_train)[2]
-print("timesteps:", timesteps)
-print("n_features:", n_features)
-model = get_model(timesteps, n_features)
+client_counts = 10
+for i in range(0,client_counts):
+    x_train, x_test, y_train, y_test, start, end = p.load_processed_partition(i, 10)
+    print("i=",i)
+    print("start=",start)
+    print("end=",end)
+    print("train shape: ", np.shape(x_train))
+    print("test shape: ", np.shape(x_test))
+    print("train label shape: ", np.shape(y_train))
+    print("test label shape: ", np.shape(y_test))
 
-
-batch_size: int = 64
-epochs: int = 400
-
-        # Train the model using hyperparameters from config
-# history = model.fit(x_train,
-#         y={'clustering': y_train, 'decoder_out': x_train},
-#         epochs=epochs,
-#         validation_split=0.2,
-#         # validation_data=(x_test, (y_test, x_test)),
-#         batch_size=batch_size,
-#         )
-
-train_history = model.fit(x_train,
-                          y={'clustering': y_train, 'decoder_out': x_train},
-                          epochs=epochs,
-                          validation_split=0.2,
-                          # validation_data=(x_test, (y_test, x_test)),
-                          batch_size=batch_size,
-                          verbose=2
-                         )
-
-q, _ = model.predict(x_train, verbose=0)
-q_t, _ = model.predict(x_test, verbose=0)
-p = target_distribution(q)
-
-y_pred = np.argmax(q, axis=1)
-y_arg = np.argmax(y_train, axis=1)
-y_pred_test = np.argmax(q_t, axis=1)
-y_arg_test = np.argmax(y_test, axis=1)
-# acc = np.sum(y_pred == y_arg).astype(np.float32) / y_pred.shape[0]
-# testAcc = np.sum(y_pred_test == y_arg_test).astype(np.float32) / y_pred_test.shape[0]
-# accuracy = np.round(accuracy_score(y_arg, y_pred), 5)
-accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
-kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
+    print ("--------------")
 
 
-print('====================')
-print('====================')
-print('====================')
-print('====================')
-print('Train accuracy')
-print(accuracy)
+

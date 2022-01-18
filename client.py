@@ -139,7 +139,7 @@ class CifarClient(fl.client.NumPyClient):
 
 
 def get_model(timesteps , n_features ):
-    gamma = 1
+    gamma = 5
     # tf.keras.backend.clear_session()
     print('Setting Up Model for training')
     print(gamma)
@@ -167,9 +167,9 @@ def get_model(timesteps , n_features ):
 
     # plot_model(model, show_shapes=True)
     #model.summary()
-    optimizer = Adam(0.005, beta_1=0.1, beta_2=0.001, amsgrad=True)
+    optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
     model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
-                  loss_weights=[gamma, 1], optimizer='adam',
+                  loss_weights=[gamma, 1], optimizer=optimizer,
                   metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
 
     print('Model compiled.           ')
@@ -213,9 +213,9 @@ def load_processed_data(clinet_index,total_no_clients):
     pathabnormal = './data/physionet/abnormal/'
     p = preprocessing()
     #last client index is for server evaluation data
-    x_train, x_test, y_train, y_test = p.load_data(pathnormal, pathabnormal, clinet_index, total_no_clients)
-        #p.load_processed_partition(clinet_index, total_no_clients)
-    #
+    x_train, x_test, y_train, y_test = p.load_processed_partition(clinet_index, total_no_clients)
+    #p.load_data(pathnormal, pathabnormal, clinet_index, total_no_clients)
+
 
     print("train shape: ", np.shape(x_train))
     print("test shape: ", np.shape(x_test))

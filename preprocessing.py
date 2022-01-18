@@ -44,7 +44,7 @@ class preprocessing:
     # 865
     def extract_features(self,audio_path):
         #     y, sr = librosa.load(audio_path, duration=3)
-        y, sr = librosa.load(audio_path, duration=5)
+        y, sr = librosa.load(audio_path, duration=10)
         #     y = librosa.util.normalize(y)
 
         if 0 < len(y):  # workaround: 0 length causes error
@@ -59,7 +59,7 @@ class preprocessing:
         S = librosa.feature.melspectrogram(y, sr=sr, n_fft=2048,
                                            hop_length=865,
                                            n_mels=128)
-        mfccs = np.transpose(librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=40))
+        mfccs = np.transpose(librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=60))
         #mfccs = librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=40)
         #     mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
         return mfccs
@@ -187,6 +187,25 @@ class preprocessing:
         x_train, x_test, y_train, y_test = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
         return x_train, x_test, y_train, y_test
 
+    def load_processed_train_data(self,total_no_clients):
+        with open('physionet_MFCC40t_X.pkl', 'rb') as input:
+            data_x = pickle.load(input)
+
+        with open('physionet_MFCC40t_Y.pkl', 'rb') as input:
+            data_y = pickle.load(input)
+
+        total_no_clients+=1
+        counts= len(data_x)//total_no_clients
+        start = 0
+        end =  (total_no_clients -1 )  * counts
+
+        data_x = np.array(data_x)
+        data_x = np.nan_to_num(data_x)
+        data_x = self.normalize_dataset(data_x)
+        data_y = np.asarray(data_y)
+
+        x_train, x_test, y_train, y_test = train_test_split(data_x[start:end], data_y[start:end], test_size=0.2, random_state=42)
+        return x_train, x_test, y_train, y_test
 
     def load_processed_partition(self,client_index, total_no_clients):
         with open('physionet_MFCC40t_X.pkl', 'rb') as input:
@@ -195,7 +214,7 @@ class preprocessing:
         with open('physionet_MFCC40t_Y.pkl', 'rb') as input:
             data_y = pickle.load(input)
 
-        total_no_clients += 1
+        #total_no_clients += 1
 
         counts= len(data_x)//total_no_clients
         start = client_index * counts

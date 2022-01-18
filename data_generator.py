@@ -48,8 +48,8 @@ print("shape xdata:", np.shape(data_x) )
 print("shape y data:", np.shape(data_y) )
 
 
-with open('physionet_MFCC20t_X.pkl', 'wb') as o:
+with open('physionet_MFCC40t_X.pkl', 'wb') as o:
     pickle.dump(data_x, o, pickle.HIGHEST_PROTOCOL)
 
-with open('physionet_MFCC20t_Y.pkl', 'wb') as o:
+with open('physionet_MFCC40t_Y.pkl', 'wb') as o:
     pickle.dump(data_y, o, pickle.HIGHEST_PROTOCOL)

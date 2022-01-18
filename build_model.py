@@ -15,7 +15,7 @@ from tensorflow.keras.callbacks import Callback
 from keras.models import Model
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
-from sklearn.metrics.cluster import normalized_mutual_info_score
+from sklearn.metrics.cluster import normalized_mutual_info_score, adjusted_mutual_info_score
 from sklearn.metrics import accuracy_score
 from sklearn.metrics.cluster import adjusted_rand_score
 import keras.backend as K
@@ -73,18 +73,28 @@ print(np.shape(data_x))
 
 print(np.shape(data_y))
 
-optimizer = Adam(0.0001, beta_1=0.1, beta_2=0.001, amsgrad=True)
-#optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
+#optimizer = Adam(0.0001, beta_1=0.1, beta_2=0.001, amsgrad=True)
+optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
 
 n_classes = 2
 batch_size = 64
 epochs = 200
 #gamma =4
+
+log_dir = "logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
 callbacks = EarlyStopping(monitor='val_clustering_accuracy', mode='max',
                               verbose=2, patience=800, restore_best_weights=True)
 
 model_dir = './model/'
 x_train, x_test, y_train, y_test = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
+
+print("shape x_train:", np.shape(x_train))
+print("shape x_test data:", np.shape(x_test))
+
+
+
 timesteps = np.shape(x_train)[1]
 n_features = np.shape(x_train)[2]
 print((timesteps, n_features))
@@ -93,7 +103,9 @@ x_train = np.asarray(x_train)
 x_test = np.nan_to_num(x_test)
 x_test = np.asarray(x_test)
 
-for gamma in  [0,0.5,1,3,5,7,9,10]:
+for gamma in  [0,0.5,1,3,5,6,7,9,10,12]:
+    log_dir = "logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
     os.chdir('D:\\UW\\Final thesis\\audio_classification')
     now = datetime.now() # current date and time
     now =now.strftime("%m")+'_'+now.strftime("%d")+'_'+now.strftime("%Y")+'_'+now.strftime("%H")+'_'+now.strftime("%M")+'_'+now.strftime("%S")
@@ -116,7 +128,7 @@ for gamma in  [0,0.5,1,3,5,7,9,10]:
     encoder = Dense(100, activation='relu')(encoder)
     encoder = Dropout(0.2)(encoder)
     encoder_out = Dense(100, activation=None, name='encoder_out')(encoder)
-    clustering = ClusteringLayer(n_clusters=2, name='clustering', alpha=0.05)(encoder_out)
+    clustering = ClusteringLayer(n_clusters=2, name='clustering', alpha=1)(encoder_out)  #alpha=0.05
     hidden = RepeatVector(timesteps, name='Hidden')(encoder_out)
     decoder = Dense(100, activation='relu')(hidden)
     decoder = Dense(64, activation='relu')(decoder)
@@ -156,7 +168,7 @@ for gamma in  [0,0.5,1,3,5,7,9,10]:
     print('====================')
 
     model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
-                  loss_weights=[gamma, 1], optimizer='adam',
+                  loss_weights=[gamma, 1], optimizer=optimizer,
                   metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
     print('Model compiled.')
     print('Training Starting:')
@@ -167,13 +179,13 @@ for gamma in  [0,0.5,1,3,5,7,9,10]:
                               # validation_data=(x_test, (y_test, x_test)),
                               batch_size=batch_size,
                               verbose=2,
-                              callbacks=callbacks)
+                              callbacks=tensorboard_callback)
 
 
     q, _ = model.predict(x_train, verbose=0)
     q_t, _ = model.predict(x_test, verbose=0)
     p = target_distribution(q)
-
+    p_t = target_distribution(q_t)
     y_pred = np.argmax(q, axis=1)
     y_arg = np.argmax(y_train, axis=1)
     y_pred_test = np.argmax(q_t, axis=1)
@@ -187,6 +199,8 @@ for gamma in  [0,0.5,1,3,5,7,9,10]:
     nmi_test = np.round(normalized_mutual_info_score(y_arg_test, y_pred_test), 5)
     ari = np.round(adjusted_rand_score(y_arg, y_pred), 5)
     ari_test = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
+    ami = np.round(adjusted_mutual_info_score(y_arg, y_pred), 5)
+    ami_test = np.round(adjusted_mutual_info_score(y_arg_test, y_pred_test), 5)
     print('====================')
     print('====================')
     print('====================')
@@ -196,16 +210,25 @@ for gamma in  [0,0.5,1,3,5,7,9,10]:
     print('Test accuracy')
     print(testAcc)
 
-    print('NMI')
-    print(nmi)
-    print('ARI')
-    print(ari)
+    print('NMI',nmi)
+
+
+    print('ARI',ari)
+
+    print('NMI test',nmi_test)
+
+    print('ARI test',ari_test)
+
+    print('AMI',ami)
+    print('AMI test',ami_test)
     print('====================')
     print('====================')
     print('====================')
     print('====================')
 
-    result = "Gamma="+str(gamma)+', Epochs='+str(epochs)+ ', Lr='+'0.0001, '+'NMI='+str(nmi) +', ARI='+str(ari) +', Train accuracy='+str(acc) + ', Test accuracy='+ str(testAcc)+"\n"
+    result = "Gamma="+str(gamma)+', Epochs='+str(epochs)+ ', Lr='+'0.0001, '+' NMI='+str(nmi) +', ARI='+str(ari) +\
+             ', Train accuracy='+str(acc) + ', Test accuracy='+ str(testAcc)+',' \
+             ' NMI Test='+str(nmi_test) + ', ARI Test=' + str(ari_test) +' AMI =' + str(ami) +' AMI test='+str(ami_test)+' time steps='+str(timesteps)+"\n"
     with open('result.txt', 'a') as f:
         f.write(result)
 
