@@ -165,18 +165,18 @@ class preprocessing:
         print("shape xdata:", np.shape(data_x))
         print("shape y data:", np.shape(data_y))
 
-        with open('physionet_MFCC40t_X.pkl', 'wb') as o:
+        with open('physionet_MFCC60t_X.pkl', 'wb') as o:
             pickle.dump(data_x, o, pickle.HIGHEST_PROTOCOL)
 
-        with open('physionet_MFCC40t_Y.pkl', 'wb') as o:
+        with open('physionet_MFCC60t_Y.pkl', 'wb') as o:
             pickle.dump(data_y, o, pickle.HIGHEST_PROTOCOL)
 
 
     def load_processed_data(self):
-        with open('physionet_MFCC40t_X.pkl', 'rb') as input:
+        with open('physionet_MFCC60t_X.pkl', 'rb') as input:
             data_x = pickle.load(input)
 
-        with open('physionet_MFCC40t_Y.pkl', 'rb') as input:
+        with open('physionet_MFCC60t_Y.pkl', 'rb') as input:
             data_y = pickle.load(input)
 
         data_x = np.array(data_x)
@@ -188,10 +188,10 @@ class preprocessing:
         return x_train, x_test, y_train, y_test
 
     def load_processed_train_data(self,total_no_clients):
-        with open('physionet_MFCC40t_X.pkl', 'rb') as input:
+        with open('physionet_MFCC60t_X.pkl', 'rb') as input:
             data_x = pickle.load(input)
 
-        with open('physionet_MFCC40t_Y.pkl', 'rb') as input:
+        with open('physionet_MFCC60t_Y.pkl', 'rb') as input:
             data_y = pickle.load(input)
 
         total_no_clients+=1
@@ -208,10 +208,10 @@ class preprocessing:
         return x_train, x_test, y_train, y_test
 
     def load_processed_partition(self,client_index, total_no_clients):
-        with open('physionet_MFCC40t_X.pkl', 'rb') as input:
+        with open('physionet_MFCC60t_X.pkl', 'rb') as input:
             data_x = pickle.load(input)
 
-        with open('physionet_MFCC40t_Y.pkl', 'rb') as input:
+        with open('physionet_MFCC60t_Y.pkl', 'rb') as input:
             data_y = pickle.load(input)
 
         #total_no_clients += 1

@@ -1,15 +1,10 @@
-0,0.79282,0.0,0.0,0.80247,0.0,0.0
-1,0.79282,0.0,0.0,0.80247,0.0,0.0
-2,0.79282,0.0,0.0,0.80247,0.0,0.0
-3,0.79282,0.0,0.0,0.80247,0.0,0.0
-4,0.79282,0.0,0.0,0.80247,0.0,0.0
-5,0.79282,0.0,0.0,0.80247,0.0,0.0
-6,0.79282,0.0,0.0,0.80247,0.0,0.0
-7,0.79282,0.0,0.0,0.80247,0.0,0.0
-8,0.79282,0.0,0.0,0.80247,0.0,0.0
-9,0.79282,0.0,0.0,0.80247,0.0,0.0
-10,0.79282,0.0,0.0,0.80247,0.0,0.0
-11,0.79282,0.0,0.0,0.80247,0.0,0.0
-12,0.79282,0.0,0.0,0.80247,0.0,0.0
-13,0.79282,0.0,0.0,0.80247,0.0,0.0
-14,0.79282,0.0,0.0,0.80247,0.0,0.0
+Gamma=0, Epochs=200, Lr=0.0001,  NMI=0.0, ARI=0.0, Train accuracy=0.78935, Test accuracy=0.81636, NMI Test=0.0, ARI Test=0.0 AMI =-0.0 AMI test=-0.0 time steps=128
+Gamma=0.5, Epochs=200, Lr=0.0001,  NMI=0.4441, ARI=0.62043, Train accuracy=0.91011, Test accuracy=0.90741, NMI Test=0.39505, ARI Test=0.58148 AMI =0.44388 AMI test=0.394 time steps=128
+Gamma=1, Epochs=200, Lr=0.0001,  NMI=0.41833, ARI=0.59461, Train accuracy=0.90394, Test accuracy=0.89506, NMI Test=0.34177, ARI Test=0.52804 AMI =0.4181 AMI test=0.34061 time steps=128
+Gamma=3, Epochs=200, Lr=0.0001,  NMI=0.4089, ARI=0.57817, Train accuracy=0.90123, Test accuracy=0.90123, NMI Test=0.3672, ARI Test=0.54455 AMI =0.40866 AMI test=0.36605 time steps=128
+Gamma=5, Epochs=200, Lr=0.0001,  NMI=0.45131, ARI=0.62744, Train accuracy=0.90818, Test accuracy=0.88272, NMI Test=0.31651, ARI Test=0.50653 AMI =0.45111 AMI test=0.31539 time steps=128
+Gamma=6, Epochs=200, Lr=0.0001,  NMI=0.46087, ARI=0.63766, Train accuracy=0.91397, Test accuracy=0.90278, NMI Test=0.37634, ARI Test=0.56559 AMI =0.46066 AMI test=0.37527 time steps=128
+Gamma=7, Epochs=200, Lr=0.0001,  NMI=0.45151, ARI=0.63076, Train accuracy=0.91049, Test accuracy=0.8966, NMI Test=0.35661, ARI Test=0.54864 AMI =0.45131 AMI test=0.35553 time steps=128
+Gamma=9, Epochs=200, Lr=0.0001,  NMI=0.47869, ARI=0.65561, Train accuracy=0.91744, Test accuracy=0.90432, NMI Test=0.3817, ARI Test=0.569 AMI =0.4785 AMI test=0.38063 time steps=128
+Gamma=10, Epochs=200, Lr=0.0001,  NMI=0.47774, ARI=0.65475, Train accuracy=0.91705, Test accuracy=0.89815, NMI Test=0.36511, ARI Test=0.55725 AMI =0.47754 AMI test=0.36405 time steps=128
+Gamma=12, Epochs=200, Lr=0.0001,  NMI=0.57932, ARI=0.72424, Train accuracy=0.93248, Test accuracy=0.8858, NMI Test=0.3426, ARI Test=0.52805 AMI =0.57917 AMI test=0.34156 time steps=128

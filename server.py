@@ -121,7 +121,7 @@ def main() -> None:
     i = 0
 
     clients_count = int(sys.argv[1])
-    _, x_val, _, y_val= load_processed_data(clients_count)
+    x_val, _ , y_val,_ = load_processed_data(clients_count)
 
     x_val = np.asarray(x_val)
     timesteps = np.shape(x_val)[1]
