@@ -13,8 +13,7 @@ import random
 from scipy import signal
 from scipy.signal import butter, iirnotch, lfilter
 import numpy as np
-import matplotlib.pyplot as plt
-from pydub import AudioSegment
+import math
 
 fs = 1000
 ## Order of five works well with ECG signals
@@ -142,10 +141,9 @@ class preprocessing:
             os.rename(file, new_name)
 
     #load related data for each client
-    def load_data(self,pathnormal,pathabnormal,client_index, total_no_clients):
-
-        # pathnormal= './data/physionet/normal/'
-        # pathabnormal = './data/physionet/abnormal/'
+    def load_data(self,pathnormal,pathabnormal,client_index, total_no_clients,features,timesteps):
+        #duration = 5 and librosa sample rate is 22050 then the formula for hop_lenght is
+        hop_lenght= math.ceil((5 * 22050) / timesteps)
         # we separate some part of our data for server evaluation, so we increase the No. of clients and keep last bunch for server evaluation purpose
         total_no_clients+=1
         x_data_normal = []
@@ -159,7 +157,7 @@ class preprocessing:
         end = ( client_index + 1 ) * counts
         for file in files:
             if start <= int(file.split('-')[1].split('.')[0]) < end:
-                x_data_normal.append(self.extract_features(file))
+                x_data_normal.append(self.extract_features(file,hop_lenght,features,timesteps))
                 y_data_normal.append([1,0])
                 print(file)
 
@@ -170,7 +168,7 @@ class preprocessing:
         end = ( client_index + 1 ) * counts
         for file in files:
             if start <= int(file.split('-')[1].split('.')[0]) < end:
-                x_data_abnormal.append(self.extract_features(file))
+                x_data_abnormal.append(self.extract_features(file,hop_lenght,features,timesteps))
                 y_data_abnormal.append([0,1])
                 print(file)
 

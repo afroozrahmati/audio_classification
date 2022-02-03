@@ -1,57 +1,21 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple
-import os
 import flwr as fl
-import tensorflow as tf
-import argparse
-import os
-import sys
-import numpy as np
-import tensorflow as tf
-from sklearn.metrics import accuracy_score
-from tensorflow.keras.layers import Dense, Activation, Dropout, LSTM, RepeatVector, TimeDistributed
-from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import accuracy_score,mean_squared_error,mutual_info_score
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-import librosa.display
-import matplotlib.pyplot as plt
-from scipy.io import wavfile
-import pandas as pd
-import glob
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy import signal
-import tensorflow as tf
-from keras import layers
 from keras.layers import Dense, Activation, Dropout, LSTM, RepeatVector, TimeDistributed
-from keras.models import Sequential, load_model
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras.callbacks import Callback
-from keras.models import Model
-from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
 from sklearn.metrics.cluster import normalized_mutual_info_score
 from sklearn.metrics import accuracy_score
 from sklearn.metrics.cluster import adjusted_rand_score
-import keras.backend as K
-from sklearn.model_selection import train_test_split
-import pandas as pd
-import numpy as np
-import os
-from tqdm import tqdm
-from tqdm import tqdm_notebook
-from datetime import datetime
-import os, fnmatch
-import pickle
-from plots import produce_plot
 from ClusteringLayer import *
 from clients_data_generation import *
+import config as cfg
 
 def target_distribution(q):  # target distribution P which enhances the discrimination of soft label Q
     weight = q ** 2 / q.sum(0)
     return (weight.T / weight.sum(1)).T
 
 def get_model(timesteps , n_features ):
-    gamma = 1
+    gamma = float(cfg.configuartion["gamma"])
     # tf.keras.backend.clear_session()
     print('Setting Up Model for training')
     print(gamma)
@@ -89,12 +53,15 @@ def get_model(timesteps , n_features ):
 
 def load_processed_data(total_no_clients):
 
-    pathnormal= './data/physionet/normal/'
-    pathabnormal = './data/physionet/abnormal/'
+    pathnormal= './data/'+cfg.configuartion['dataset']+'/normal/'
+    pathabnormal = './data/'+cfg.configuartion['dataset']+'/abnormal/'
+    features, timesteps = int(cfg.configuartion["features"]), int(cfg.configuartion["timesteps"])
+
     p = preprocessing()
     #last client index is for server evaluation data
     #x_train, x_test, y_train, y_test = p.load_processed_partition(total_no_clients, total_no_clients)
-    x_train, x_test, y_train, y_test = p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
+    x_train, x_test, y_train, y_test = p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients,features,timesteps)
+
 
     print("train shape: ", np.shape(x_train))
     print("test shape: ", np.shape(x_test))
@@ -118,7 +85,7 @@ def main() -> None:
     global i
     i = 0
 
-    clients_count = 10 #int(sys.argv[1])
+    clients_count = int(cfg.configuartion["client_counts"]) #int(sys.argv[1])
     x_train, x_test, y_train, y_test= load_processed_data(clients_count)
 
     x_val = np.asarray(x_train)
@@ -144,7 +111,7 @@ def main() -> None:
 
 
     # Start Flower server for four rounds of federated learning
-    fl.server.start_server("54.183.195.180:8080", config={"num_rounds": 200}, strategy=strategy)
+    fl.server.start_server("54.183.195.180:8080", config={"num_rounds": int(cfg.configuartion["server_rounds"])}, strategy=strategy)
 
 
 
@@ -184,7 +151,7 @@ def get_eval_fn(model,x_train, x_test, y_train, y_test):
         ari = np.round(adjusted_rand_score(y_arg, y_pred), 5)
         ari_test = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
 
-        clients_count = 2
+        clients_count = cfg.configuartion["client_counts"]
         epochs = 200
         batch_size = 64
         global i
@@ -205,8 +172,8 @@ def fit_config(rnd: int):
     local epoch, increase to two local epochs afterwards.
     """
     config = {
-        "batch_size": 64,
-        "local_epochs": 1 if rnd < 2 else 2,
+        "batch_size": int(cfg.configuartion["batch_size"]),
+        "local_epochs": 1 if rnd < 2 else int(cfg.configuartion["local_epochs"]),
     }
     return config
 

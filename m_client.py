@@ -1,48 +1,12 @@
 import flwr as fl
-import tensorflow as tf
-import argparse
-import os
 import sys
-import numpy as np
-import tensorflow as tf
-from sklearn.metrics import accuracy_score
-from tensorflow.keras.layers import Dense, Activation, Dropout, LSTM, RepeatVector, TimeDistributed
-from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import accuracy_score,mean_squared_error,mutual_info_score
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-import librosa.display
-import matplotlib.pyplot as plt
-from scipy.io import wavfile
-import pandas as pd
-import glob
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy import signal
-import tensorflow as tf
-from keras import layers
 from keras.layers import Dense, Activation, Dropout, LSTM, RepeatVector, TimeDistributed
-from keras.models import Sequential, load_model
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras.callbacks import Callback
-from keras.models import Model
-from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
-from sklearn.metrics.cluster import normalized_mutual_info_score
 from sklearn.metrics import accuracy_score
-from sklearn.metrics.cluster import adjusted_rand_score
-import keras.backend as K
-from sklearn.model_selection import train_test_split
-import pandas as pd
-import numpy as np
-import os
-from tqdm import tqdm
-from tqdm import tqdm_notebook
-from datetime import datetime
-import os, fnmatch
-import pickle
-from plots import produce_plot
 from ClusteringLayer import *
 from clients_data_generation import *
+import config as cfg
 
 # Make TensorFlow logs less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -138,7 +102,7 @@ class CifarClient(fl.client.NumPyClient):
         return kld_loss, num_examples_test, {"accuracy": accuracy}
 
 def get_model(timesteps , n_features ):
-    gamma = 1
+    gamma = float(cfg.configuartion["gamma"])
     # tf.keras.backend.clear_session()
     print('Setting Up Model for training')
     print(gamma)
@@ -166,7 +130,8 @@ def get_model(timesteps , n_features ):
 
     # plot_model(model, show_shapes=True)
     #model.summary()
-    optimizer = Adam(0.005, beta_1=0.1, beta_2=0.001, amsgrad=True)
+    optimizer = Adam(0.001, beta_1=0.1, beta_2=0.001, amsgrad=True)
+    # optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
     model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
                   loss_weights=[gamma, 1], optimizer='adam',
                   metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
@@ -188,7 +153,7 @@ def main() -> None:
     # args = parser.parse_args()
 
     idx = int(sys.argv[1])
-    clients_count= 2 #int(sys.argv[2])
+    clients_count= int(cfg.configuartion["client_counts"])
     x_train, x_test, y_train, y_test  = load_processed_data(idx,clients_count)
     x_train = np.asarray(x_train)
     timesteps = np.shape(x_train)[1]
@@ -208,12 +173,13 @@ def main() -> None:
 
 def load_processed_data(clinet_index,total_no_clients):
 
-    pathnormal= './data/physionet/normal/'
-    pathabnormal = './data/physionet/abnormal/'
+    pathnormal= './data/'+cfg.configuartion['dataset']+'/normal/'
+    pathabnormal = './data/'+cfg.configuartion['dataset']+'/abnormal/'
     p = preprocessing()
     #last client index is for server evaluation data
     #x_train, x_test, y_train, y_test = p.load_processed_partition(clinet_index, total_no_clients)
-    x_train, x_test, y_train, y_test = p.load_data(pathnormal, pathabnormal, clinet_index, total_no_clients)
+    x_train, x_test, y_train, y_test = p.load_data(pathnormal, pathabnormal, clinet_index, total_no_clients, int(cfg.configuartion["features"]),
+                                                   int(cfg.configuartion["timesteps"]))
 
     print("train shape: ", np.shape(x_train))
     print("test shape: ", np.shape(x_test))
