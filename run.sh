@@ -2,13 +2,13 @@
 
 declare -i client_counts=10
 declare -i one=1
-declare -i epochs=400
+declare -i epochs=10
 declare -i batch_size=64
 
 
 z=$(( client_counts - one ))
 "c:\users\Afrooz\anaconda3\envs\Capstone\python.exe" server.py  ${client_counts} ${epochs}  ${batch_size}  &
-sleep 10 # Sleep for 2s to give the server enough time to start
+sleep 60 # Sleep for 2s to give the server enough time to start
 
 for i in `seq 0 $z`; do
     echo "Starting client $i"

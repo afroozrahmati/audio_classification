@@ -45,19 +45,20 @@ import pickle
 from plots import produce_plot
 from ClusteringLayer import *
 from clients_data_generation import *
+from tensorflow import keras
 
 def target_distribution(q):  # target distribution P which enhances the discrimination of soft label Q
     weight = q ** 2 / q.sum(0)
     return (weight.T / weight.sum(1)).T
 
 def get_model(timesteps , n_features ):
-    gamma = 5
+    gamma = 1
     # tf.keras.backend.clear_session()
     print('Setting Up Model for training')
     print(gamma)
 
     inputs = Input(shape=(timesteps, n_features))
-    encoder = LSTM(32, activation='tanh')(inputs)
+    encoder = LSTM(32, activation='sigmoid')(inputs)
     encoder = Dropout(0.2)(encoder)
     encoder = Dense(64, activation='relu')(encoder)
     encoder = Dropout(0.2)(encoder)
@@ -68,7 +69,7 @@ def get_model(timesteps , n_features ):
     hidden = RepeatVector(timesteps, name='Hidden')(encoder_out)
     decoder = Dense(100, activation='relu')(hidden)
     decoder = Dense(64, activation='relu')(decoder)
-    decoder = LSTM(32, activation='tanh', return_sequences=True)(decoder)
+    decoder = LSTM(32, activation='sigmoid', return_sequences=True)(decoder)
     output = TimeDistributed(Dense(n_features), name='decoder_out')(decoder)
     encoder_model = Model(inputs=inputs, outputs=encoder_out)
     # kmeans.fit(encoder_model.predict(x_train))
@@ -81,7 +82,7 @@ def get_model(timesteps , n_features ):
     #model.summary()
     optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
     model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
-                  loss_weights=[gamma, 1], optimizer=optimizer,
+                  loss_weights=[gamma, 1], optimizer='adam',
                   metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
 
     print('Model compiled.           ')
@@ -89,15 +90,13 @@ def get_model(timesteps , n_features ):
 
 def load_processed_data(total_no_clients):
 
-    pathnormal= './data/physionet/normal/'
-    pathabnormal = './data/physionet/abnormal/'
+    path_x='./data/processed_files/physionet_40_5_X.pkl' #'./data/processed_files/physionet_40_5_X.pkl'
+    path_y = './data/processed_files/physionet_40_5_Y.pkl'  # './data/processed_files/physionet_40_5_Y.pkl'
+
     p = preprocessing()
-    #last client index is for server evaluation data
-    #x_train, _, y_train, _ = p.load_processed_train_data(total_no_clients)
 
-    x_train, x_test,y_train, y_test = p.load_processed_data() #(total_no_clients, total_no_clients)
-
-#p.load_data(pathnormal, pathabnormal, total_no_clients, total_no_clients)
+    x_train, x_test,y_train, y_test = p.load_processed_partition(total_no_clients, total_no_clients,path_x,path_y)
+        #p.load_processed_data(path_x,path_y)
     print("train shape: ", np.shape(x_train))
     print("test shape: ", np.shape(x_test))
     print("train label shape: ",np.shape(y_train))
@@ -113,6 +112,11 @@ def load_processed_data(total_no_clients):
 
     return x_train, x_test, y_train, y_test
 
+
+def get_pre_trained_model(path):
+    return keras.models.load_model(path)
+
+
 def main() -> None:
     # Load and compile model for
     # 1. server-side parameter initialization
@@ -121,24 +125,29 @@ def main() -> None:
     i = 0
 
     clients_count = int(sys.argv[1])
-    x_val, _ , y_val,_ = load_processed_data(clients_count)
+    #x_val, _ , y_val ,_ = load_processed_data(clients_count)
 
-    x_val = np.asarray(x_val)
-    timesteps = np.shape(x_val)[1]
-    n_features = np.shape(x_val)[2]
-    print("timesteps:",timesteps)
-    print("n_features:", n_features)
-    model= get_model(timesteps,n_features)
+    # x_val = np.asarray(x_val)
+    # timesteps = np.shape(x_val)[1]
+    # n_features = np.shape(x_val)[2]
+    # print("timesteps:",timesteps)
+    # print("n_features:", n_features)
+    #model= get_model(timesteps,n_features)
+
+    model =get_pre_trained_model(r"D:\UW\Final thesis\audio_classification\model\model\physionet_40_5_1_200_128_02_01_2022_13_37_44")
+
+    
+    #open pre-trained model
     #print(sys.argv[1])
 
     # Create strategy
     strategy = fl.server.strategy.FedAvg(
-        fraction_fit=  1 , #0.3,
-        fraction_eval= 1,
+        fraction_fit=  0.5,
+        fraction_eval= 0.3,
         min_fit_clients=3,
         min_eval_clients=2,
         min_available_clients=clients_count,
-        eval_fn=get_eval_fn(model,x_val, y_val),
+        #eval_fn=get_eval_fn(model,x_val, y_val),
         on_fit_config_fn=fit_config,
         on_evaluate_config_fn=evaluate_config,
         initial_parameters=fl.common.weights_to_parameters(model.get_weights()),
@@ -169,7 +178,6 @@ def get_eval_fn(model,x_val, y_val):
         #p = target_distribution(q)
 
         q, _ = model.predict(x_val, verbose=0)
-        p = target_distribution(q)
 
         y_pred = np.argmax(q, axis=1)
         y_arg = np.argmax(y_val, axis=1)
@@ -186,7 +194,9 @@ def get_eval_fn(model,x_val, y_val):
         batch_size = sys.argv[3]
         global i
         i+=1
-        output=clients_count+','+epochs+','+batch_size+','+str(i)+','+str(nmi)+','+str(ari)+','+str(accuracy)+'\n'
+
+
+        output=str(np.shape(x_val))+','+clients_count+','+epochs+','+batch_size+','+str(i)+','+str(nmi)+','+str(ari)+','+str(accuracy)+'\n'
         with open('result.csv', 'a') as f:
             f.write(output)
 
@@ -203,7 +213,7 @@ def fit_config(rnd: int):
     """
     config = {
         "batch_size": int(sys.argv[3]),
-        "local_epochs": 1 if rnd < 2 else 2,
+        "local_epochs": 1 if rnd < 2 else 50,
     }
     return config
 

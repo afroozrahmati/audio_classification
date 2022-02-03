@@ -44,27 +44,27 @@ def normalize_dataset(x):
 path = './data/physionet/validation/'
 files = glob.glob(path + '/*.wav')
 os.chdir('D:\\UW\\Final thesis\\audio_classification')
-filename= './model/model/01_18_2022_15_17_29_Gamma(6)-Optim(Adam)_200'
+filename= './model/model/pascal_40_5_1_200_128_01_31_2022_22_56_03'
 model = keras.models.load_model(filename)
 preprocess= preprocessing()
-for file in files:
-
-    with open('answers.txt', 'a') as of:
-        data = preprocess.extract_features(file)
-        data = np.array(data)
-        data = np.nan_to_num(data)
-        data = normalize_dataset(data)
-        print("shape xdata:", np.shape(data))
-        data =np.reshape(data,[1,np.shape(data)[0],np.shape(data)[1]])
-        print("shape xdata:", np.shape(data))
-        q, _ = model.predict(data, verbose=0)
-        y_pred = np.argmax(q, axis=1)
-        print(y_pred)
-        head, tail = os.path.split(file)
-        tail=tail.split('.')[0]
-        if y_pred[0]==1:
-
-            of.write(tail+',1\n')
-        else:
-            of.write(tail+',-1\n')
-        print(file)
+# for file in files:
+#
+#     with open('answers.txt', 'a') as of:
+#         data = preprocess.extract_features(file)
+#         data = np.array(data)
+#         data = np.nan_to_num(data)
+#         data = normalize_dataset(data)
+#         print("shape xdata:", np.shape(data))
+#         data =np.reshape(data,[1,np.shape(data)[0],np.shape(data)[1]])
+#         print("shape xdata:", np.shape(data))
+#         q, _ = model.predict(data, verbose=0)
+#         y_pred = np.argmax(q, axis=1)
+#         print(y_pred)
+#         head, tail = os.path.split(file)
+#         tail=tail.split('.')[0]
+#         if y_pred[0]==1:
+#
+#             of.write(tail+',1\n')
+#         else:
+#             of.write(tail+',-1\n')
+#         print(file)

@@ -59,10 +59,28 @@ def target_distribution(q):  # target distribution P which enhances the discrimi
     weight = q ** 2 / q.sum(0)
     return (weight.T / weight.sum(1)).T
 
-with open('physionet_MFCC80t_X.pkl', 'rb') as input:
+
+# files = glob.glob('./data/processed_files/' + '/*_X.pkl')
+# for file in files:
+#     parts=os.path.basename(file).split('_')
+#     dataset=parts[0]
+#     features=parts[1]
+#     duration=parts[2]
+#     if dataset=='physionet':
+#         continue
+#
+#     file_y= './data/processed_files/'+dataset+'_'+features+'_'+duration+'_Y.pkl'
+file= './data/processed_files/pascal_40_5_X.pkl'
+file_y= './data/processed_files/pascal_40_5_y.pkl'
+
+dataset = 'pascal'
+features ='40'
+duration ='5'
+
+with open(file, 'rb') as input:
     data_x = pickle.load(input)
 
-with open('physionet_MFCC80t_Y.pkl', 'rb') as input:
+with open(file_y, 'rb') as input:
     data_y = pickle.load(input)
 
 data_x = np.array(data_x)
@@ -73,19 +91,21 @@ print(np.shape(data_x))
 
 print(np.shape(data_y))
 
-#optimizer = Adam(0.0001, beta_1=0.1, beta_2=0.001, amsgrad=True)
-optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
+optimizer = Adam(0.001, beta_1=0.1, beta_2=0.001, amsgrad=True)
+#optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
 
 n_classes = 2
 batch_size = 64
-epochs = 200
+epochs = 500
 #gamma =4
 
-log_dir = "logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-callbacks = EarlyStopping(monitor='val_clustering_accuracy', mode='max',
-                              verbose=2, patience=800, restore_best_weights=True)
+
+# callbacks = EarlyStopping(monitor='val_clustering_accuracy', mode='max',
+#                               verbose=2, patience=800, restore_best_weights=True)
+
+
+callbacks = ModelCheckpoint('best_model.h5', monitor='val_clustering_accuracy', mode='max', save_best_only=True)
 
 model_dir = './model/'
 x_train, x_test, y_train, y_test = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
@@ -103,17 +123,19 @@ x_train = np.asarray(x_train)
 x_test = np.nan_to_num(x_test)
 x_test = np.asarray(x_test)
 
-for gamma in  [0,0.5,1,3,5,6,7,9,10,12]:
-    log_dir = "logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-    os.chdir('D:\\UW\\Final thesis\\audio_classification')
+for gamma in  [1]:
     now = datetime.now() # current date and time
     now =now.strftime("%m")+'_'+now.strftime("%d")+'_'+now.strftime("%Y")+'_'+now.strftime("%H")+'_'+now.strftime("%M")+'_'+now.strftime("%S")
+
+    model_name =  dataset +'_'+features+'_'+duration+'_'+str(gamma)+'_'+str(epochs)+'_'+str(timesteps)+'_'+now
+    log_dir = "logs/" + model_name
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    os.chdir('D:\\UW\\Final thesis\\audio_classification')
 
     tf.keras.backend.clear_session()
     print('Setting Up Model for training')
     print(gamma)
-    model_name = now +'_'+ 'Gamma('+str(gamma) +')-Optim('+"Adam"+')'+'_'+str(epochs)
+
     print(model_name)
 
     model = 0
@@ -121,18 +143,18 @@ for gamma in  [0,0.5,1,3,5,6,7,9,10,12]:
     inputs=encoder=decoder=hidden=clustering=output=0
 
     inputs = Input(shape=(timesteps, n_features))
-    encoder = LSTM(32, activation='tanh')(inputs)
+    encoder = LSTM(32, activation='sigmoid')(inputs)
     encoder = Dropout(0.2)(encoder)
     encoder = Dense(64, activation='relu')(encoder)
     encoder = Dropout(0.2)(encoder)
     encoder = Dense(100, activation='relu')(encoder)
     encoder = Dropout(0.2)(encoder)
     encoder_out = Dense(100, activation=None, name='encoder_out')(encoder)
-    clustering = ClusteringLayer(n_clusters=2, name='clustering', alpha=1)(encoder_out)  #alpha=0.05
+    clustering = ClusteringLayer(n_clusters=2, name='clustering', alpha=0.05)(encoder_out)  #alpha=0.05
     hidden = RepeatVector(timesteps, name='Hidden')(encoder_out)
     decoder = Dense(100, activation='relu')(hidden)
     decoder = Dense(64, activation='relu')(decoder)
-    decoder = LSTM(32, activation='tanh', return_sequences=True)(decoder)
+    decoder = LSTM(32, activation='sigmoid', return_sequences=True)(decoder)
     output = TimeDistributed(Dense(n_features), name='decoder_out')(decoder)
 
     # kmeans = KMeans(n_clusters=2, n_init=100)
@@ -168,9 +190,12 @@ for gamma in  [0,0.5,1,3,5,6,7,9,10,12]:
     print('====================')
 
     model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
-                  loss_weights=[gamma, 1], optimizer=optimizer,
+                  loss_weights=[gamma, 1], optimizer='adam',
                   metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
     print('Model compiled.')
+
+    tf.keras.utils.plot_model(model, to_file='lstm_model.png', show_shapes=True, show_layer_names=True)
+
     print('Training Starting:')
     train_history = model.fit(x_train,
                               y={'clustering': y_train, 'decoder_out': x_train},
@@ -179,7 +204,7 @@ for gamma in  [0,0.5,1,3,5,6,7,9,10,12]:
                               # validation_data=(x_test, (y_test, x_test)),
                               batch_size=batch_size,
                               verbose=2,
-                              callbacks=tensorboard_callback)
+                              callbacks=callbacks)
 
 
     q, _ = model.predict(x_train, verbose=0)
@@ -226,10 +251,11 @@ for gamma in  [0,0.5,1,3,5,6,7,9,10,12]:
     print('====================')
     print('====================')
 
-    result = "Gamma="+str(gamma)+', Epochs='+str(epochs)+ ', Lr='+'0.0001, '+' NMI='+str(nmi) +', ARI='+str(ari) +\
-             ', Train accuracy='+str(acc) + ', Test accuracy='+ str(testAcc)+',' \
-             ' NMI Test='+str(nmi_test) + ', ARI Test=' + str(ari_test) +' AMI =' + str(ami) +' AMI test='+str(ami_test)+' time steps='+str(timesteps)+"\n"
-    with open('result.txt', 'a') as f:
+    result = dataset +','+features+','+duration+','+str(gamma)+','+str(epochs)+ ','+str(nmi) +','+str(ari) +\
+             ','+str(acc) + ','+ str(testAcc)+',' \
+             ''+str(nmi_test) + ',' + str(ari_test) +',' + str(ami) +','+str(ami_test)+','+str(timesteps)+"\n"
+
+    with open('result_all.csv', 'a') as f:
         f.write(result)
 
     os.chdir('D:\\UW\\Final thesis\\audio_classification')

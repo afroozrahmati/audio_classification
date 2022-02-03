@@ -129,23 +129,32 @@ class CifarClient(fl.client.NumPyClient):
         accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
         kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
 
+        nmi = np.round(normalized_mutual_info_score(y_arg_test, y_pred_test), 5)
+        ari = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
         # acc = np.sum(y_pred == y_arg).astype(np.float32) / y_pred.shape[0]
         # testAcc = np.sum(y_pred_test == y_arg_test).astype(np.float32) / y_pred_test.shape[0]
         acc = np.round(accuracy_score(y_arg, y_pred), 5)
         testAcc = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
 
+
+        output=str(nmi)+','+str(ari)+','+str(testAcc)+'\n'
+        with open('result.csv', 'a') as f:
+             f.write(output)
+
+        print("kld_loss=",kld_loss,"accuracy=",testAcc)
+
         num_examples_test = len(self.x_test)
-        return kld_loss, num_examples_test, {"accuracy": accuracy}
+        return kld_loss, num_examples_test, {"accuracy": testAcc}
 
 
 def get_model(timesteps , n_features ):
-    gamma = 5
+    gamma = 1
     # tf.keras.backend.clear_session()
     print('Setting Up Model for training')
     print(gamma)
 
     inputs = Input(shape=(timesteps, n_features))
-    encoder = LSTM(32, activation='tanh')(inputs)
+    encoder = LSTM(32, activation='sigmoid')(inputs)
     encoder = Dropout(0.2)(encoder)
     encoder = Dense(64, activation='relu')(encoder)
     encoder = Dropout(0.2)(encoder)
@@ -156,7 +165,7 @@ def get_model(timesteps , n_features ):
     hidden = RepeatVector(timesteps, name='Hidden')(encoder_out)
     decoder = Dense(100, activation='relu')(hidden)
     decoder = Dense(64, activation='relu')(decoder)
-    decoder = LSTM(32, activation='tanh', return_sequences=True)(decoder)
+    decoder = LSTM(32, activation='sigmoid', return_sequences=True)(decoder)
     output = TimeDistributed(Dense(n_features), name='decoder_out')(decoder)
     encoder_model = Model(inputs=inputs, outputs=encoder_out)
     # kmeans.fit(encoder_model.predict(x_train))
@@ -169,7 +178,7 @@ def get_model(timesteps , n_features ):
     #model.summary()
     optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
     model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
-                  loss_weights=[gamma, 1], optimizer=optimizer,
+                  loss_weights=[gamma, 1], optimizer='adam',
                   metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
 
     print('Model compiled.           ')
@@ -209,11 +218,11 @@ def main() -> None:
 
 def load_processed_data(clinet_index,total_no_clients):
 
-    pathnormal= './data/physionet/normal/'
-    pathabnormal = './data/physionet/abnormal/'
+    path_x='./data/processed_files/pascal_40_5_X.pkl'
+    path_y = './data/processed_files/pascal_40_5_Y.pkl'
     p = preprocessing()
     #last client index is for server evaluation data
-    x_train, x_test, y_train, y_test = p.load_processed_partition(clinet_index, total_no_clients)
+    x_train, x_test, y_train, y_test = p.load_processed_partition(clinet_index, total_no_clients,path_x,path_y)
     #p.load_data(pathnormal, pathabnormal, clinet_index, total_no_clients)
 
 

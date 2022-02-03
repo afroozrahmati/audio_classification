@@ -10,10 +10,68 @@ import os
 from sklearn.model_selection import train_test_split
 import pickle
 import random
+from scipy import signal
+from scipy.signal import butter, iirnotch, lfilter
+import numpy as np
+import matplotlib.pyplot as plt
+from pydub import AudioSegment
+
+fs = 1000
+## Order of five works well with ECG signals
+cutoff_high = 0.5
+cutoff_low = 2
+powerline = 60
+order = 5
+
+## A high pass filter allows frequencies higher than a cut-off value
+def butter_highpass(cutoff, fs, order=5):
+    nyq = 0.5*fs
+    normal_cutoff = cutoff/nyq
+    b, a = butter(order, normal_cutoff, btype='high', analog=False, output='ba')
+    return b, a
+## A low pass filter allows frequencies lower than a cut-off value
+def butter_lowpass(cutoff, fs, order=5):
+    nyq = 0.5*fs
+    normal_cutoff = cutoff/nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False, output='ba')
+    return b, a
+def notch_filter(cutoff, q):
+    nyq = 0.5*fs
+    freq = cutoff/nyq
+    b, a = iirnotch(freq, q)
+    return b, a
+
+def highpass(data, fs, order=5):
+    b,a = butter_highpass(cutoff_high, fs, order=order)
+    x = lfilter(b,a,data)
+    return x
+
+def lowpass(data, fs, order =5):
+    b,a = butter_lowpass(cutoff_low, fs, order=order)
+    y = lfilter(b,a,data)
+    return y
+
+def notch(data, powerline, q):
+    b,a = notch_filter(powerline,q)
+    z = lfilter(b,a,data)
+    return z
+
+def final_filter(data, fs, order=5):
+    b, a = butter_highpass(cutoff_high, fs, order=order)
+    x = lfilter(b, a, data)
+    d, c = butter_lowpass(cutoff_low, fs, order = order)
+    y = lfilter(d, c, x)
+    f, e = notch_filter(powerline, 30)
+    z = lfilter(f, e, y)
+    return z
+
+
+
 
 class preprocessing:
     def __init__(self,sr = 22050,duration = 5):
           # Sampling rate
+        self.duration = duration
         self.samples = sr * duration
 
     def normalize(self,img):
@@ -41,11 +99,15 @@ class preprocessing:
       return normalized_dataset
 
 
-    # 865
-    def extract_features(self,audio_path):
+    # hop_lenght =865 for duartion=5
+    # hop_lenght = 520 for duration=3
+    # hop_lenght = 1725 for duration =10
+    def extract_features(self,audio_path,hop_lenght,features,n_mels):
         #     y, sr = librosa.load(audio_path, duration=3)
-        y, sr = librosa.load(audio_path, duration=10)
+        y, sr = librosa.load(audio_path, duration = self.duration)
         #     y = librosa.util.normalize(y)
+        # y= self.band_pass_filter(y)
+        # self.samples = fs * self.duration
 
         if 0 < len(y):  # workaround: 0 length causes error
             y, _ = librosa.effects.trim(y)
@@ -57,12 +119,18 @@ class preprocessing:
             y = np.pad(y, (offset, self.samples - len(y) - offset), 'constant')
 
         S = librosa.feature.melspectrogram(y, sr=sr, n_fft=2048,
-                                           hop_length=865,
-                                           n_mels=128)
-        mfccs = np.transpose(librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=60))
+                                           hop_length=hop_lenght,
+                                           n_mels=n_mels)
+        mfccs = np.transpose(librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=features))
         #mfccs = librosa.feature.mfcc(S=librosa.power_to_db(S), n_mfcc=40)
         #     mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
         return mfccs
+
+    def band_pass_filter(self,ecg_singal):
+        filter_signal = final_filter(ecg_singal, fs, order)
+        return filter_signal
+
+
 
     #rename files to the proper format, so we can partition it for each client
     def rename_files(self,path):
@@ -165,18 +233,18 @@ class preprocessing:
         print("shape xdata:", np.shape(data_x))
         print("shape y data:", np.shape(data_y))
 
-        with open('physionet_MFCC60t_X.pkl', 'wb') as o:
+        with open('./data/processed_files/augmented_data_40_2_X.pkl', 'wb') as o:
             pickle.dump(data_x, o, pickle.HIGHEST_PROTOCOL)
 
-        with open('physionet_MFCC60t_Y.pkl', 'wb') as o:
+        with open('./data/processed_files/augmented_data_40_2_Y.pkl', 'wb') as o:
             pickle.dump(data_y, o, pickle.HIGHEST_PROTOCOL)
 
 
-    def load_processed_data(self):
-        with open('physionet_MFCC60t_X.pkl', 'rb') as input:
+    def load_processed_data(self,file_path_x,file_path_y):
+        with open(file_path_x, 'rb') as input:
             data_x = pickle.load(input)
 
-        with open('physionet_MFCC60t_Y.pkl', 'rb') as input:
+        with open(file_path_y, 'rb') as input:
             data_y = pickle.load(input)
 
         data_x = np.array(data_x)
@@ -188,13 +256,13 @@ class preprocessing:
         return x_train, x_test, y_train, y_test
 
     def load_processed_train_data(self,total_no_clients):
-        with open('physionet_MFCC60t_X.pkl', 'rb') as input:
+        with open('./data/processed_files/augmented_data_40_2_X.pkl', 'rb') as input:
             data_x = pickle.load(input)
 
-        with open('physionet_MFCC60t_Y.pkl', 'rb') as input:
+        with open('./data/processed_files/augmented_data_40_2_Y.pkl', 'rb') as input:
             data_y = pickle.load(input)
 
-        total_no_clients+=1
+        #total_no_clients+=1
         counts= len(data_x)//total_no_clients
         start = 0
         end =  (total_no_clients -1 )  * counts
@@ -207,14 +275,14 @@ class preprocessing:
         x_train, x_test, y_train, y_test = train_test_split(data_x[start:end], data_y[start:end], test_size=0.2, random_state=42)
         return x_train, x_test, y_train, y_test
 
-    def load_processed_partition(self,client_index, total_no_clients):
-        with open('physionet_MFCC60t_X.pkl', 'rb') as input:
+    def load_processed_partition(self,client_index, total_no_clients,file_path_x,file_path_y):
+        with open(file_path_x, 'rb') as input:
             data_x = pickle.load(input)
 
-        with open('physionet_MFCC60t_Y.pkl', 'rb') as input:
+        with open(file_path_y, 'rb') as input:
             data_y = pickle.load(input)
 
-        #total_no_clients += 1
+        total_no_clients += 1
 
         counts= len(data_x)//total_no_clients
         start = client_index * counts
@@ -229,9 +297,4 @@ class preprocessing:
         return x_train, x_test, y_train, y_test
 
 
-# print("shape xdata:", np.shape(data_x) )
-# print("shape y data:", np.shape(data_y) )
-#
-#
-#
 
