@@ -57,6 +57,9 @@ def load_processed_data(total_no_clients):
     pathabnormal = './data/'+cfg.configuartion['dataset']+'/abnormal/'
     features, timesteps = int(cfg.configuartion["features"]), int(cfg.configuartion["timesteps"])
 
+    print(pathnormal)
+    print(pathabnormal)
+
     p = preprocessing()
     #last client index is for server evaluation data
     #x_train, x_test, y_train, y_test = p.load_processed_partition(total_no_clients, total_no_clients)
@@ -98,11 +101,11 @@ def main() -> None:
 
     # Create strategy
     strategy = fl.server.strategy.FedAvg(
-        fraction_fit=0.3,
-        fraction_eval=0.2,
-        min_fit_clients=2,
-        min_eval_clients=2,
-        min_available_clients=clients_count,
+        fraction_fit=float(cfg.configuartion["fraction_fit"]),
+        fraction_eval=float(cfg.configuartion["fraction_eval"]),
+        min_fit_clients=int(cfg.configuartion["min_fit_clients"]),
+        min_eval_clients=int(cfg.configuartion["min_eval_clients"]),
+        min_available_clients=int(cfg.configuartion["client_counts"]),
         eval_fn=get_eval_fn(model,x_train, x_test, y_train, y_test),
         on_fit_config_fn=fit_config,
         on_evaluate_config_fn=evaluate_config,
@@ -111,7 +114,7 @@ def main() -> None:
 
 
     # Start Flower server for four rounds of federated learning
-    fl.server.start_server("54.183.195.180:8080", config={"num_rounds": int(cfg.configuartion["server_rounds"])}, strategy=strategy)
+    fl.server.start_server("192.168.1.237:8080", config={"num_rounds": int(cfg.configuartion["server_rounds"])}, strategy=strategy)
 
 
 
@@ -156,9 +159,9 @@ def get_eval_fn(model,x_train, x_test, y_train, y_test):
         batch_size = 64
         global i
         i+=1
-        # output=clients_count+','+epochs+','+batch_size+','+str(i)+','+str(nmi)+','+str(ari)+','+str(accuracy)+','+str(test_accuracy)+'\n'
-        # with open('result.csv', 'a') as f:
-        #     f.write(output)
+        output=clients_count+','+epochs+','+batch_size+','+str(i)+','+str(nmi)+','+str(ari)+','+str(accuracy)+','+str(test_accuracy)+'\n'
+        with open('result.csv', 'a') as f:
+            f.write(output)
 
         print("kld_loss=",kld_loss,"accuracy=",test_accuracy)
         return kld_loss, {"accuracy": accuracy}

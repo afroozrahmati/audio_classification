@@ -8,5 +8,10 @@ configuartion = {
     "batch_size" :"64",
     "features" : "40" ,
     "timesteps" :"128",
-    "dataset" :"physionet"
+    "dataset" :"physionet",
+    "min_eval_clients" : "2",
+    "min_fit_clients":"2" ,
+    "fraction_fit":"0.3",
+    "fraction_eval":"0.2"
+
 }

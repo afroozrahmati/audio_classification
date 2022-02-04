@@ -151,6 +151,10 @@ class preprocessing:
         x_data_abnormal = []
         y_data_abnormal =[]
 
+        print(pathnormal)
+        print(pathabnormal)
+
+
         files = glob.glob(pathnormal + '/*.wav')
         counts= len(files)//total_no_clients
         start = client_index  * counts

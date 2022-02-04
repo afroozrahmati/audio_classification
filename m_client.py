@@ -95,8 +95,8 @@ class CifarClient(fl.client.NumPyClient):
 
         # acc = np.sum(y_pred == y_arg).astype(np.float32) / y_pred.shape[0]
         # testAcc = np.sum(y_pred_test == y_arg_test).astype(np.float32) / y_pred_test.shape[0]
-        acc = np.round(accuracy_score(y_arg, y_pred), 5)
-        testAcc = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
+        # acc = np.round(accuracy_score(y_arg, y_pred), 5)
+        # testAcc = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
 
         num_examples_test = len(self.x_test)
         return kld_loss, num_examples_test, {"accuracy": accuracy}
@@ -168,7 +168,7 @@ def main() -> None:
 
     # Start Flower client
     client = CifarClient(model, x_train, y_train, x_test, y_test)
-    fl.client.start_numpy_client("54.183.195.180:8080", client=client)
+    fl.client.start_numpy_client("192.168.1.237:8080", client=client)
 
 
 def load_processed_data(clinet_index,total_no_clients):
