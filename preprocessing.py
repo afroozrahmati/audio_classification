@@ -14,6 +14,12 @@ from scipy import signal
 from scipy.signal import butter, iirnotch, lfilter
 import numpy as np
 import math
+from scipy import signal
+from scipy.signal import butter, iirnotch, lfilter
+import numpy as np
+import matplotlib.pyplot as plt
+import numpy as np
+import heartpy as hp
 
 fs = 1000
 ## Order of five works well with ECG signals
@@ -65,8 +71,6 @@ def final_filter(data, fs, order=5):
     return z
 
 
-
-
 class preprocessing:
     def __init__(self,sr = 22050,duration = 5):
           # Sampling rate
@@ -101,9 +105,15 @@ class preprocessing:
     # hop_lenght =865 for duartion=5
     # hop_lenght = 520 for duration=3
     # hop_lenght = 1725 for duration =10
+
+
+
     def extract_features(self,audio_path,hop_lenght,features,n_mels):
         #     y, sr = librosa.load(audio_path, duration=3)
         y, sr = librosa.load(audio_path, duration = self.duration)
+        #y = hp.filter_signal(y, cutoff=15, sample_rate=sr, order=5, filtertype='lowpass')
+        #self.samples = sr * self.duration
+        #y = final_filter(y, fs, order)
         #     y = librosa.util.normalize(y)
         # y= self.band_pass_filter(y)
         # self.samples = fs * self.duration
@@ -151,6 +161,8 @@ class preprocessing:
         x_data_abnormal = []
         y_data_abnormal =[]
 
+        print("client_index:" , client_index)
+        print("total_no_clients:" , total_no_clients)
         print(pathnormal)
         print(pathabnormal)
 

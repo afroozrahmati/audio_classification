@@ -1,6 +1,9 @@
 import flwr as fl
 import sys
 from sklearn.metrics import accuracy_score,mean_squared_error,mutual_info_score
+from sklearn.metrics.cluster import normalized_mutual_info_score
+from sklearn.metrics import accuracy_score
+from sklearn.metrics.cluster import adjusted_rand_score
 from keras.layers import Dense, Activation, Dropout, LSTM, RepeatVector, TimeDistributed
 from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import accuracy_score
@@ -92,11 +95,14 @@ class CifarClient(fl.client.NumPyClient):
         #accuracy = np.round(accuracy_score(y_arg, y_pred), 5)
         accuracy = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
         kld_loss = np.round(mutual_info_score(y_arg_test, y_pred_test), 5)
+        nmi = np.round(normalized_mutual_info_score(y_arg_test, y_pred_test), 5)
+        ari = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
 
-        # acc = np.sum(y_pred == y_arg).astype(np.float32) / y_pred.shape[0]
-        # testAcc = np.sum(y_pred_test == y_arg_test).astype(np.float32) / y_pred_test.shape[0]
-        # acc = np.round(accuracy_score(y_arg, y_pred), 5)
-        # testAcc = np.round(accuracy_score(y_arg_test, y_pred_test), 5)
+        if cfg.configuartion["evaluation_type"]=="client":
+            print("kld_loss=", kld_loss, "accuracy=", accuracy , "rnd",config["rnd"])
+            output = str(config["rnd"]) + ','+str(nmi) + ',' + str(ari) + ',' + str(accuracy) + '\n'
+            with open('result.csv', 'a') as f:
+                f.write(output)
 
         num_examples_test = len(self.x_test)
         return kld_loss, num_examples_test, {"accuracy": accuracy}

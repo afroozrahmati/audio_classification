@@ -3,6 +3,7 @@ import glob
 import numpy as np
 import pickle
 import random
+from pydub import AudioSegment
 
 #input parameters
 
@@ -44,12 +45,12 @@ def file_augmentation(segments):
         print(file)
 
 
-#file_augmentation(2)
+#file_augmentation(5)
 
 for duration in [5]:
     for features in [40]:
-        for dataset in ['physionet']:
-            for timesteps in [64,256]:
+        for dataset in ['pascal']:
+            for timesteps in [128]:
 
                 preprocess = preprocessing(duration=duration)
 
@@ -62,16 +63,16 @@ for duration in [5]:
                 x_data_abnormal = []
                 y_data_abnormal =[]
 
-
+                hop_lenght = math.ceil((duration*22050) /timesteps)+1
                 # hop_lenght =865 for duartion=5
                 # hop_lenght = 520 for duration=3
                 # hop_lenght = 1725 for duration =10
                 # hop_lenght=0
-                if timesteps==64:
-                     hop_lenght=1740
-                #
-                if timesteps==256:
-                     hop_lenght=432
+                # if timesteps==64:
+                #      hop_lenght=1740
+                # #
+                # if timesteps==256:
+                #      hop_lenght=432
                 #
                 # if duration==10:
                 #     hop_lenght=1725
@@ -110,10 +111,10 @@ for duration in [5]:
 
                 dir = './data/processed_files/'
 
-                with open(dir+dataset+'_'+str(features)+'_'+str(duration)+'_'+str(timesteps)+'_X.pkl', 'wb') as o:
+                with open(dir+dataset+'_'+str(features)+'_'+str(duration)+'_'+str(timesteps)+'_new_X.pkl', 'wb') as o:
                     pickle.dump(data_x, o, pickle.HIGHEST_PROTOCOL)
 
-                with open(dir+dataset+'_'+str(features)+'_'+str(duration)+'_'+str(timesteps)+'_Y.pkl', 'wb') as o:
+                with open(dir+dataset+'_'+str(features)+'_'+str(duration)+'_'+str(timesteps)+'_new_Y.pkl', 'wb') as o:
                     pickle.dump(data_y, o, pickle.HIGHEST_PROTOCOL)
 
 # duration=5

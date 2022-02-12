@@ -30,6 +30,16 @@ import os, fnmatch
 import pickle
 from plots import produce_plot
 from ClusteringLayer import *
+from sklearn.manifold import TSNE
+from numpy import reshape
+import seaborn as sns
+import pandas as pd
+from sklearn.manifold import TSNE
+from numpy import reshape
+import seaborn as sns
+import pandas as pd
+
+
 
 def normalize(img):
     '''
@@ -70,8 +80,8 @@ def target_distribution(q):  # target distribution P which enhances the discrimi
 #         continue
 #
 #     file_y= './data/processed_files/'+dataset+'_'+features+'_'+duration+'_Y.pkl'
-file= './data/processed_files/pascal_40_5_X.pkl'
-file_y= './data/processed_files/pascal_40_5_y.pkl'
+file= './data/processed_files/pascal_40_5_128_new_X.pkl'
+file_y= './data/processed_files/pascal_40_5_128_new_Y.pkl'
 
 dataset = 'pascal'
 features ='40'
@@ -91,7 +101,7 @@ print(np.shape(data_x))
 
 print(np.shape(data_y))
 
-optimizer = Adam(0.001, beta_1=0.1, beta_2=0.001, amsgrad=True)
+#optimizer = Adam(0.001, beta_1=0.1, beta_2=0.001, amsgrad=True)
 #optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
 
 n_classes = 2
@@ -122,8 +132,10 @@ print((timesteps, n_features))
 x_train = np.asarray(x_train)
 x_test = np.nan_to_num(x_test)
 x_test = np.asarray(x_test)
+tsne = TSNE(perplexity=50,learning_rate=0.1 ,n_components=2, verbose=2,n_iter=5000)
 
-for gamma in  [1]:
+
+for gamma in  [5]:
     now = datetime.now() # current date and time
     now =now.strftime("%m")+'_'+now.strftime("%d")+'_'+now.strftime("%Y")+'_'+now.strftime("%H")+'_'+now.strftime("%M")+'_'+now.strftime("%S")
 
@@ -143,7 +155,7 @@ for gamma in  [1]:
     inputs=encoder=decoder=hidden=clustering=output=0
 
     inputs = Input(shape=(timesteps, n_features))
-    encoder = LSTM(32, activation='sigmoid')(inputs)
+    encoder = LSTM(32, activation='tanh')(inputs)
     encoder = Dropout(0.2)(encoder)
     encoder = Dense(64, activation='relu')(encoder)
     encoder = Dropout(0.2)(encoder)
@@ -154,15 +166,15 @@ for gamma in  [1]:
     hidden = RepeatVector(timesteps, name='Hidden')(encoder_out)
     decoder = Dense(100, activation='relu')(hidden)
     decoder = Dense(64, activation='relu')(decoder)
-    decoder = LSTM(32, activation='sigmoid', return_sequences=True)(decoder)
+    decoder = LSTM(32, activation='tanh', return_sequences=True)(decoder)
     output = TimeDistributed(Dense(n_features), name='decoder_out')(decoder)
 
-    # kmeans = KMeans(n_clusters=2, n_init=100)
+    kmeans = KMeans(n_clusters=2, n_init=100)
 
     encoder_model = Model(inputs=inputs, outputs=encoder_out)
-    # kmeans.fit(encoder_model.predict(x_train))
-
-
+    #kmeans.fit(encoder_model.predict(x_train))
+    # if epochs==100:
+    #     z = tsne.fit_transform(encoder_model.predict(x_train))
     model = Model(inputs=inputs, outputs=[clustering, output])
 
 
@@ -226,6 +238,10 @@ for gamma in  [1]:
     ari_test = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
     ami = np.round(adjusted_mutual_info_score(y_arg, y_pred), 5)
     ami_test = np.round(adjusted_mutual_info_score(y_arg_test, y_pred_test), 5)
+
+
+
+
     print('====================')
     print('====================')
     print('====================')

@@ -9,6 +9,7 @@ from sklearn.metrics.cluster import adjusted_rand_score
 from ClusteringLayer import *
 from clients_data_generation import *
 import config as cfg
+import keras
 
 def target_distribution(q):  # target distribution P which enhances the discrimination of soft label Q
     weight = q ** 2 / q.sum(0)
@@ -43,7 +44,8 @@ def get_model(timesteps , n_features ):
 
     # plot_model(model, show_shapes=True)
     #model.summary()
-    optimizer = Adam(0.005, beta_1=0.1, beta_2=0.001, amsgrad=True)
+    optimizer = Adam(0.001, beta_1=0.1, beta_2=0.001, amsgrad=True)
+    # optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=True)
     model.compile(loss={'clustering': 'kld', 'decoder_out': 'mse'},
                   loss_weights=[gamma, 1], optimizer='adam',
                   metrics={'clustering': 'accuracy', 'decoder_out': 'mse'})
@@ -81,6 +83,23 @@ def load_processed_data(total_no_clients):
 
     return x_train, x_test, y_train, y_test
 
+
+class SaveModelStrategy(fl.server.strategy.FedAvg):
+    def aggregate_fit(
+        self,
+        rnd: int,
+        results: List[Tuple[fl.server.client_proxy.ClientProxy, fl.common.FitRes]],
+        failures: List[BaseException],
+    ) -> Optional[fl.common.Weights]:
+        aggregated_weights = super().aggregate_fit(rnd, results, failures)
+        if aggregated_weights is not None:
+            # Save aggregated_weights
+            print(f"Saving round {rnd} aggregated_weights...")
+
+            np.savez(f"round-{rnd}-weights.npz", *aggregated_weights)
+        return aggregated_weights
+
+
 def main() -> None:
     # Load and compile model for
     # 1. server-side parameter initialization
@@ -89,32 +108,53 @@ def main() -> None:
     i = 0
 
     clients_count = int(cfg.configuartion["client_counts"]) #int(sys.argv[1])
-    x_train, x_test, y_train, y_test= load_processed_data(clients_count)
 
-    x_val = np.asarray(x_train)
-    timesteps = np.shape(x_train)[1]
-    n_features = np.shape(x_train)[2]
-    print("timesteps:",timesteps)
-    print("n_features:", n_features)
-    model= get_model(timesteps,n_features)
-    #print(sys.argv[1])
 
-    # Create strategy
-    strategy = fl.server.strategy.FedAvg(
-        fraction_fit=float(cfg.configuartion["fraction_fit"]),
-        fraction_eval=float(cfg.configuartion["fraction_eval"]),
-        min_fit_clients=int(cfg.configuartion["min_fit_clients"]),
-        min_eval_clients=int(cfg.configuartion["min_eval_clients"]),
-        min_available_clients=int(cfg.configuartion["client_counts"]),
-        eval_fn=get_eval_fn(model,x_train, x_test, y_train, y_test),
-        on_fit_config_fn=fit_config,
-        on_evaluate_config_fn=evaluate_config,
-        initial_parameters=fl.common.weights_to_parameters(model.get_weights()),
-    )
+    # x_val = np.asarray(x_train)
+    # timesteps = np.shape(x_train)[1]
+    # n_features = np.shape(x_train)[2]
+    #print("timesteps:",timesteps)
+    #print("n_features:", n_features)
+    timesteps = int(cfg.configuartion["timesteps"])
+    n_features = int(cfg.configuartion["features"])
+
+    #model= get_model(timesteps,n_features)
+
+    model = keras.models.load_model(
+        r"D:\UW\Final thesis\audio_classification\model\model\physionet_40_5_1_200_128_02_01_2022_13_37_44")
+
+    if cfg.configuartion["evaluation_type"] == "client":
+        #Create strategy
+        strategy = fl.server.strategy.FedAvg(
+            fraction_fit=float(cfg.configuartion["fraction_fit"]),
+            fraction_eval=float(cfg.configuartion["fraction_eval"]),
+            min_fit_clients=int(cfg.configuartion["min_fit_clients"]),
+            min_eval_clients=int(cfg.configuartion["min_eval_clients"]),
+            min_available_clients=int(cfg.configuartion["client_counts"]),
+            #eval_fn=get_eval_fn(model,x_train, x_test, y_train, y_test),
+            on_fit_config_fn=fit_config,
+            on_evaluate_config_fn=evaluate_config,
+            initial_parameters=fl.common.weights_to_parameters(model.get_weights()),
+        )
+    else:
+        x_train, x_test, y_train, y_test= load_processed_data(clients_count)
+        #Create strategy
+        strategy = fl.server.strategy.FedAvg(
+            fraction_fit=float(cfg.configuartion["fraction_fit"]),
+            fraction_eval=float(cfg.configuartion["fraction_eval"]),
+            min_fit_clients=int(cfg.configuartion["min_fit_clients"]),
+            min_eval_clients=int(cfg.configuartion["min_eval_clients"]),
+            min_available_clients=int(cfg.configuartion["client_counts"]),
+            eval_fn=get_eval_fn(model,x_train, x_test, y_train, y_test),
+            on_fit_config_fn=fit_config,
+            on_evaluate_config_fn=evaluate_config,
+            initial_parameters=fl.common.weights_to_parameters(model.get_weights()),
+        )
 
 
     # Start Flower server for four rounds of federated learning
-    fl.server.start_server("192.168.1.237:8080", config={"num_rounds": int(cfg.configuartion["server_rounds"])}, strategy=strategy)
+
+    fl.server.start_server("192.168.1.237:8080", config={"num_rounds": int(cfg.configuartion["server_rounds"])} , strategy = strategy )
 
 
 
@@ -154,7 +194,7 @@ def get_eval_fn(model,x_train, x_test, y_train, y_test):
         ari = np.round(adjusted_rand_score(y_arg, y_pred), 5)
         ari_test = np.round(adjusted_rand_score(y_arg_test, y_pred_test), 5)
 
-        clients_count = cfg.configuartion["client_counts"]
+        clients_count = int(cfg.configuartion["client_counts"])
         epochs = 200
         batch_size = 64
         global i
@@ -188,7 +228,7 @@ def evaluate_config(rnd: int):
     evaluation steps.
     """
     val_steps = 5 if rnd < 4 else 10
-    return {"val_steps": val_steps}
+    return {"val_steps": val_steps , "rnd": rnd}
 
 
 if __name__ == "__main__":
