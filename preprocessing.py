@@ -111,6 +111,7 @@ class preprocessing:
     def extract_features(self,audio_path,hop_lenght,features,n_mels):
         #     y, sr = librosa.load(audio_path, duration=3)
         y, sr = librosa.load(audio_path, duration = self.duration)
+        #print(y)
         #y = hp.filter_signal(y, cutoff=15, sample_rate=sr, order=5, filtertype='lowpass')
         #self.samples = sr * self.duration
         #y = final_filter(y, fs, order)

@@ -80,8 +80,8 @@ def target_distribution(q):  # target distribution P which enhances the discrimi
 #         continue
 #
 #     file_y= './data/processed_files/'+dataset+'_'+features+'_'+duration+'_Y.pkl'
-file= './data/processed_files/pascal_40_5_128_new_X.pkl'
-file_y= './data/processed_files/pascal_40_5_128_new_Y.pkl'
+file= './data/processed_files/physionet_40_5_X.pkl'
+file_y= './data/processed_files/physionet_40_5_Y.pkl'
 
 dataset = 'pascal'
 features ='40'

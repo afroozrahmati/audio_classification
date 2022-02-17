@@ -47,9 +47,13 @@ def file_augmentation(segments):
 
 #file_augmentation(5)
 
+
+
+j = 0
+i=0
 for duration in [5]:
     for features in [40]:
-        for dataset in ['pascal']:
+        for dataset in ['physionet']:
             for timesteps in [128]:
 
                 preprocess = preprocessing(duration=duration)
@@ -79,15 +83,19 @@ for duration in [5]:
                 #hop_lenght=345
                 files = glob.glob(pathnormal + '/*.wav')
                 for file in files:
-                    x_data_normal.append(preprocess.extract_features(file,hop_lenght,features,timesteps))
-                    y_data_normal.append([1,0])
-                    print(file)
+                    if i <50 :
+                        x_data_normal.append(preprocess.extract_features(file,hop_lenght,features,timesteps))
+                        y_data_normal.append([1,0])
+                        print(file)
+                        i+=1
 
                 files = glob.glob(pathabnormal + '/*.wav')
                 for file in files:
-                    x_data_abnormal.append(preprocess.extract_features(file,hop_lenght,features,timesteps))
-                    y_data_abnormal.append([0,1])
-                    print(file)
+                    if j < 50:
+                        x_data_abnormal.append(preprocess.extract_features(file,hop_lenght,features,timesteps))
+                        y_data_abnormal.append([0,1])
+                        print(file)
+                        j+=1
 
 
                 print("shape x normal data:", np.shape(x_data_normal) )
@@ -111,10 +119,10 @@ for duration in [5]:
 
                 dir = './data/processed_files/'
 
-                with open(dir+dataset+'_'+str(features)+'_'+str(duration)+'_'+str(timesteps)+'_new_X.pkl', 'wb') as o:
+                with open(dir+dataset+'_'+str(features)+'_'+str(duration)+'_'+str(timesteps)+'_test100_X.pkl', 'wb') as o:
                     pickle.dump(data_x, o, pickle.HIGHEST_PROTOCOL)
 
-                with open(dir+dataset+'_'+str(features)+'_'+str(duration)+'_'+str(timesteps)+'_new_Y.pkl', 'wb') as o:
+                with open(dir+dataset+'_'+str(features)+'_'+str(duration)+'_'+str(timesteps)+'_test100_Y.pkl', 'wb') as o:
                     pickle.dump(data_y, o, pickle.HIGHEST_PROTOCOL)
 
 # duration=5
